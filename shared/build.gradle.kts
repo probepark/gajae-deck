@@ -87,6 +87,12 @@ kotlin {
     }
 }
 
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "io.devnogari.gajaedeck.resources"
+    generateResClass = always
+}
+
 compose.desktop {
     application {
         mainClass = "io.devnogari.gajaedeck.MainKt"

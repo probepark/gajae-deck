@@ -1,0 +1,19 @@
+gajae-deck — third-party notices
+=================================
+
+Noto Sans KR
+------------
+This application bundles a subset of the Noto Sans KR variable font
+(shared/src/commonMain/composeResources/font/notosanskr.ttf), used to render
+Korean (Hangul) and Latin text.
+
+Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name
+"Source Han Sans" / Noto Sans CJK.
+
+Licensed under the SIL Open Font License, Version 1.1. The full license text is
+bundled with the app at composeResources/files/notosanskr_OFL.txt and is
+available at https://scripts.sil.org/OFL.
+
+The bundled font is a subset (Latin-1 + Hangul Jamo/Syllables + common
+punctuation) of the upstream variable font to reduce payload size; the wght axis
+(100–900) is retained so Regular/Medium/Bold weights render from a single file.

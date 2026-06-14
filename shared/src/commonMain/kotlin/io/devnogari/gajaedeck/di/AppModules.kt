@@ -6,6 +6,7 @@ import io.devnogari.gajaedeck.auth.TokenLifecycle
 import io.devnogari.gajaedeck.pairing.PairingRepository
 import io.devnogari.gajaedeck.observability.AppLogger
 import io.devnogari.gajaedeck.observability.ErrorHandler
+import io.devnogari.gajaedeck.ui.SessionControllerFactory
 import io.devnogari.gajaedeck.settings.AppSettings
 import io.devnogari.gajaedeck.settings.ObservableAppSettings
 import kotlinx.serialization.json.Json
@@ -40,15 +41,18 @@ val observabilityModule: Module = module {
     single { ErrorHandler(redactor = get()) }
 }
 
-/**
- * The full Koin graph: shared feature modules plus the per-platform [platformModule]. Navigation/UI
- * controller factories are layered on in later stories.
- */
+/** UI composition seam: builds a redaction-seeded SessionController for a saved pairing. */
+val uiModule: Module = module {
+    single { SessionControllerFactory(secureStore = get()) }
+}
+
+/** The full Koin graph: shared feature modules plus the per-platform [platformModule]. */
 fun appModules(): List<Module> = listOf(
     appModule,
     authModule,
     observabilityModule,
     settingsModule,
     pairingModule,
+    uiModule,
     platformModule(),
 )

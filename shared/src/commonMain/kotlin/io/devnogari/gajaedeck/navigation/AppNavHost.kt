@@ -1,6 +1,12 @@
 package io.devnogari.gajaedeck.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,6 +25,7 @@ import io.devnogari.gajaedeck.pairing.PairingRepository
 import io.devnogari.gajaedeck.settings.AppSettings
 import io.devnogari.gajaedeck.ui.PairingsListScreen
 import io.devnogari.gajaedeck.ui.SessionController
+import io.devnogari.gajaedeck.ui.SessionControllerFactory
 import io.devnogari.gajaedeck.ui.SessionScreen
 import io.devnogari.gajaedeck.ui.SettingsScreen
 import kotlinx.coroutines.launch
@@ -34,7 +41,7 @@ fun AppNavHost(
     pairingRepository: PairingRepository,
     appSettings: AppSettings,
     storageLowerAssurance: Boolean,
-    sessionControllerFactory: (pairingId: String) -> SessionController,
+    sessionControllerFactory: SessionControllerFactory,
     navController: NavHostController = rememberNavController(),
 ) {
     val actions = remember(navController) { NavigationActions(navController) }
@@ -64,9 +71,19 @@ fun AppNavHost(
         }
         composable<SessionRoute> { entry ->
             val pairingId = entry.toRoute<SessionRoute>().pairingId
-            val controller = remember(pairingId) { sessionControllerFactory(pairingId) }
-            LaunchedEffect(controller) { controller.connect() }
-            SessionScreen(controller, onBack = actions::back)
+            val sessionScope = rememberCoroutineScope()
+            val controller by produceState<SessionController?>(null, pairingId) {
+                value = sessionControllerFactory.create(pairingId, sessionScope)
+            }
+            val active = controller
+            if (active != null) {
+                LaunchedEffect(active) { active.connect() }
+                SessionScreen(active, onBack = actions::back)
+            } else {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
         }
         composable<SettingsRoute> {
             SettingsScreen(appSettings = appSettings, storageLowerAssurance = storageLowerAssurance, onBack = actions::back)

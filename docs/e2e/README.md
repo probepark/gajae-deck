@@ -19,10 +19,24 @@ Caddy same-origin reverse proxy (`/` = app, `/healthz` + `/v1/*` → bridge) and
 headless Chromium. The gajae-deck pairing screen renders (Host / Port / Bearer token / connect).
 Screenshot: `web-e2e.png`.
 
-### Finding (follow-up)
-Korean glyphs render as tofu boxes on the **Web and Desktop** targets because the default skiko font
-lacks CJK coverage (Android/iOS use system fonts and are unaffected). Bundle a CJK-capable font as a
-Compose resource and set it as the default `FontFamily` to fix.
+### Finding (RESOLVED in G007/G009)
+Korean glyphs previously rendered as tofu boxes on the **Web and Desktop** (skiko) targets because
+the default skiko font lacks CJK coverage. Fixed by bundling a subset Noto Sans KR variable font
+(OFL) as a Compose resource and binding it as the default Material3 typography (G007), then wiring it
+through the Koin composition root (G009).
+
+## Web (G009 integration, ko locale) — PASS
+The Koin-backed composition root (`App` → `GajaeDeckTheme` → `AppNavHost`) rendered in headless
+Chromium with a `ko-KR` locale against the compiled wasm distribution:
+- Pairings screen renders Korean with real glyphs — `가재덱`, `페어링`, `아직 페어링이 없습니다.`,
+  `호스트` / `포트` / `Bearer 토큰`, `연결`, `설정` (no tofu). Screenshot: `g009-web-ko-pairing.png`.
+- Navigation to Settings (`설정`) shows the theme selector (`시스템`/`라이트`/`다크`) and the web
+  lower-assurance notice (web `SecureStore` is `BROWSER_LOCAL_STORAGE`). Screenshot:
+  `g009-web-ko-settings.png`.
+
+Desktop shares the identical skiko renderer, bundled font, and Compose code path, so the Web render
+is representative of the Desktop surface; Desktop logic is covered by the green `:shared:desktopTest`
+suite (90 tests).
 
 ## Pending (require devices/simulators)
 - iOS real E2E (Xcode simulator) + native Keychain SecureStore + Darwin TLS pinning runtime test.

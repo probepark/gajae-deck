@@ -72,13 +72,6 @@ class TokenLifecycleTest {
     }
 
     @Test
-    fun deleteRemovesPairing() = runTest {
-        val store = InMemorySecureStore(listOf(pairing()))
-        TokenLifecycle(store).deletePairing("p1")
-        assertNull(store.load("p1"))
-    }
-
-    @Test
     fun diagnosis() {
         val lifecycle = TokenLifecycle(InMemorySecureStore())
         assertEquals(AuthBlockedDiagnosis.MISSING_TOKEN, lifecycle.diagnose(BridgeErrorCode.UNAUTHORIZED, hasToken = false))

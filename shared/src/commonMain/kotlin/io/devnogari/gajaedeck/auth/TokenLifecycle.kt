@@ -13,8 +13,11 @@ enum class AuthBlockedDiagnosis {
 }
 
 /**
- * Token lifecycle and recovery operations over a [SecureStore]: replace/delete a pairing's
- * token (clearing cached session/pin/owner state) and diagnose auth failures.
+ * Secret-level token primitive over a [SecureStore]: replace a pairing's token (clearing cached
+ * session/pin/owner state) and diagnose auth failures. This is metadata-neutral (it never touches
+ * [io.devnogari.gajaedeck.settings.PairingMetadata]), so it is safe for
+ * [io.devnogari.gajaedeck.pairing.PairingRepository] to compose. Pairing deletion is owned by the
+ * repository, not here, because deleting a secret without its metadata would cause drift.
  */
 class TokenLifecycle(private val store: SecureStore) {
 
@@ -32,8 +35,6 @@ class TokenLifecycle(private val store: SecureStore) {
         store.save(updated)
         return updated
     }
-
-    suspend fun deletePairing(id: String) = store.delete(id)
 
     fun diagnose(code: BridgeErrorCode, hasToken: Boolean): AuthBlockedDiagnosis = when {
         !hasToken -> AuthBlockedDiagnosis.MISSING_TOKEN

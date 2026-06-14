@@ -17,4 +17,8 @@
     <string name="theme_dark">다크</string>
     <string name="settings_language">언어</string>
     <string name="web_lower_assurance_notice">브라우저 저장소는 기기 키 저장소보다 보안이 약합니다. 웹에서는 세션 한정 토큰을 권장합니다.</string>
+    <string name="field_host">호스트</string>
+    <string name="field_port">포트</string>
+    <string name="field_token">Bearer 토큰</string>
+    <string name="connect_failed">페어링을 저장하지 못했습니다. 정보를 확인하고 다시 시도하세요.</string>
 </resources>

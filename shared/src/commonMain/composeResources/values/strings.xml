@@ -17,4 +17,8 @@
     <string name="theme_dark">Dark</string>
     <string name="settings_language">Language</string>
     <string name="web_lower_assurance_notice">Browser storage is less secure than device key stores; prefer session-scoped tokens on web.</string>
+    <string name="field_host">Host</string>
+    <string name="field_port">Port</string>
+    <string name="field_token">Bearer token</string>
+    <string name="connect_failed">Could not save the pairing. Check the details and try again.</string>
 </resources>

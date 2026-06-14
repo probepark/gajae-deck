@@ -8,6 +8,8 @@ import io.devnogari.gajaedeck.auth.SecureStore
 import io.devnogari.gajaedeck.auth.TofuVerifier
 import io.devnogari.gajaedeck.auth.TokenLifecycle
 import io.devnogari.gajaedeck.pairing.PairingRepository
+import io.devnogari.gajaedeck.observability.AppLogger
+import io.devnogari.gajaedeck.observability.ErrorHandler
 import io.devnogari.gajaedeck.settings.AppSettings
 import kotlinx.serialization.json.Json
 import org.koin.core.context.startKoin
@@ -36,12 +38,14 @@ class KoinModulesTest {
     @Test
     fun featureGraphResolvesEverySingleton() {
         val koin = startKoin {
-            modules(appModule, authModule, settingsModule, pairingModule, testPlatformModule())
+            modules(appModule, authModule, observabilityModule, settingsModule, pairingModule, testPlatformModule())
         }.koin
 
         // Every feature singleton must be constructible from the wired graph.
         assertNotNull(koin.get<Json>())
         assertNotNull(koin.get<Redactor>())
+        assertNotNull(koin.get<AppLogger>())
+        assertNotNull(koin.get<ErrorHandler>())
         assertNotNull(koin.get<TokenLifecycle>())
         assertNotNull(koin.get<TofuVerifier>())
         assertNotNull(koin.get<AppSettings>())
@@ -53,7 +57,7 @@ class KoinModulesTest {
     @Test
     fun singletonsAreSingletons() {
         val koin = startKoin {
-            modules(appModule, authModule, settingsModule, pairingModule, testPlatformModule())
+            modules(appModule, authModule, observabilityModule, settingsModule, pairingModule, testPlatformModule())
         }.koin
         assertSame(koin.get<PairingRepository>(), koin.get<PairingRepository>())
         assertSame(koin.get<AppSettings>(), koin.get<AppSettings>())
@@ -62,7 +66,7 @@ class KoinModulesTest {
     @Test
     fun appModulesIncludesAllFeatureModules() {
         // appModules() composes the feature modules + the real platformModule; structural sanity check.
-        val expected = listOf(appModule, authModule, settingsModule, pairingModule)
+        val expected = listOf(appModule, authModule, observabilityModule, settingsModule, pairingModule)
         val composed = appModules()
         assertNotNull(composed)
         expected.forEach { module -> assertNotNull(composed.firstOrNull { it === module }, "missing feature module") }

@@ -4,6 +4,8 @@ import io.devnogari.gajaedeck.auth.Redactor
 import io.devnogari.gajaedeck.auth.TofuVerifier
 import io.devnogari.gajaedeck.auth.TokenLifecycle
 import io.devnogari.gajaedeck.pairing.PairingRepository
+import io.devnogari.gajaedeck.observability.AppLogger
+import io.devnogari.gajaedeck.observability.ErrorHandler
 import io.devnogari.gajaedeck.settings.AppSettings
 import io.devnogari.gajaedeck.settings.ObservableAppSettings
 import kotlinx.serialization.json.Json
@@ -32,8 +34,21 @@ val pairingModule: Module = module {
     single { PairingRepository(secureStore = get(), settings = get(), tokenLifecycle = get()) }
 }
 
+/** Observability: a redaction-by-construction logger and the user-facing error mapper. */
+val observabilityModule: Module = module {
+    single { AppLogger.redacting(redactor = get()) }
+    single { ErrorHandler(redactor = get()) }
+}
+
 /**
- * The full Koin graph: shared feature modules plus the per-platform [platformModule]. UI/connector
- * factories (observability, navigation, session controller) are layered on in later stories.
+ * The full Koin graph: shared feature modules plus the per-platform [platformModule]. Navigation/UI
+ * controller factories are layered on in later stories.
  */
-fun appModules(): List<Module> = listOf(appModule, authModule, settingsModule, pairingModule, platformModule())
+fun appModules(): List<Module> = listOf(
+    appModule,
+    authModule,
+    observabilityModule,
+    settingsModule,
+    pairingModule,
+    platformModule(),
+)

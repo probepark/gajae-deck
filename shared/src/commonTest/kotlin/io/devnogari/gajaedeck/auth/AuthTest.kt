@@ -42,6 +42,18 @@ class RedactorTest {
         assertEquals("***", redacted["Authorization"])
         assertEquals("ok", redacted["X-Other"])
     }
+
+    @Test
+    fun masksSensitiveKeyValueFormsWithoutInjectedSecrets() {
+        // The live/default (unseeded) redactor must still scrub structured token/header value forms.
+        val out = Redactor().redact(
+            "failed token=abc123 ownerToken=xyz9 Authorization: rawAuth X-GJC-Bridge-Owner-Token: own3r access_token=aaa111",
+        )
+        listOf("abc123", "xyz9", "rawAuth", "own3r", "aaa111").forEach {
+            assertFalse(out.contains(it), "unseeded redactor leaked '$it' in: $out")
+        }
+        assertTrue(out.contains("***"))
+    }
 }
 
 class SecureStoreTest {

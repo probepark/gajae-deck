@@ -12,6 +12,9 @@ import io.devnogari.gajaedeck.bridge.ConnectionState
 import io.devnogari.gajaedeck.bridge.IdempotencyKeys
 import io.devnogari.gajaedeck.bridge.ProtocolVersionRange
 import io.devnogari.gajaedeck.bridge.TimelineReducer
+import io.devnogari.gajaedeck.auth.Redactor
+import io.devnogari.gajaedeck.observability.AppLogger
+import io.devnogari.gajaedeck.observability.ErrorHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +40,9 @@ data class SessionUiState(
 class SessionController(
     private val connector: BridgeConnector,
     private val scope: CoroutineScope,
+    private val redactor: Redactor = Redactor(),
+    private val errorHandler: ErrorHandler = ErrorHandler(redactor),
+    private val logger: AppLogger = AppLogger.redacting(redactor),
 ) {
     private val _state = MutableStateFlow(SessionUiState())
     val state: StateFlow<SessionUiState> = _state.asStateFlow()
@@ -73,7 +79,7 @@ class SessionController(
                     timeline.accept(frame)
                     _state.update { it.copy(frames = it.frames + frame) }
                 }
-            }.onFailure { e -> fail(e.message ?: "connection error") }
+            }.onFailure { e -> fail(e) }
         }
     }
 
@@ -96,12 +102,34 @@ class SessionController(
                 }
                 .onFailure { e ->
                     outbox.markRejected(key)
-                    val reason = (e as? BridgeException)?.code?.name ?: e.message
+                    val reason = (e as? BridgeException)?.let { errorHandler.handle(it).message }
+                        ?: redactor.redact(e.message ?: "error")
                     log("$type → error: $reason")
                 }
         }
     }
 
-    private fun log(line: String) = _state.update { it.copy(sentLog = (it.sentLog + line).takeLast(50)) }
-    private fun fail(msg: String) = _state.update { it.copy(error = msg) }
+    private fun log(line: String) {
+        val safe = redactor.redact(line)
+        logger.info(TAG, safe)
+        _state.update { it.copy(sentLog = (it.sentLog + safe).takeLast(50)) }
+    }
+
+    /** Constructed failure message (redacted before it reaches the UI/logs). */
+    private fun fail(message: String) {
+        val safe = redactor.redact(message)
+        logger.warn(TAG, safe)
+        _state.update { it.copy(error = safe) }
+    }
+
+    /** Caught failure: mapped to user-safe copy via [ErrorHandler]; the raw throwable is only logged (redacted). */
+    private fun fail(throwable: Throwable) {
+        val uiError = errorHandler.handle(throwable)
+        logger.error(TAG, uiError.message, throwable)
+        _state.update { it.copy(error = uiError.message) }
+    }
+
+    private companion object {
+        const val TAG = "SessionController"
+    }
 }

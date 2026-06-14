@@ -58,6 +58,7 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.kermit)
             implementation(libs.multiplatform.settings)
+            implementation(libs.multiplatform.settings.coroutines)
             implementation(libs.navigation.compose)
         }
         androidMain.dependencies {
@@ -82,6 +83,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.ktor.client.mock)
             implementation(libs.koin.test)
+            implementation(libs.multiplatform.settings.test)
         }
     }
 }

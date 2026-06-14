@@ -58,7 +58,6 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.kermit)
             implementation(libs.multiplatform.settings)
-            implementation(libs.multiplatform.settings.coroutines)
             implementation(libs.navigation.compose)
         }
         androidMain.dependencies {

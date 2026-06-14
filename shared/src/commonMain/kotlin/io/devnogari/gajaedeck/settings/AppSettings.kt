@@ -1,14 +1,9 @@
 package io.devnogari.gajaedeck.settings
 
-import com.russhwolf.settings.ExperimentalSettingsApi
-import com.russhwolf.settings.ObservableSettings
-import com.russhwolf.settings.coroutines.getStringOrNullStateFlow
-import com.russhwolf.settings.coroutines.getStringStateFlow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.SharingStarted
+import com.russhwolf.settings.Settings
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
@@ -35,65 +30,58 @@ interface AppSettings {
     fun removePairing(id: String)
 }
 
-@OptIn(ExperimentalSettingsApi::class)
+/**
+ * [AppSettings] over a plain multiplatform-settings [Settings], which works on every platform
+ * including web localStorage (where no observable Settings exists). Reactivity is provided by
+ * write-through [StateFlow]s the class owns: because pairing/settings mutation flows through a single
+ * writer ([io.devnogari.gajaedeck.pairing.PairingRepository] and this class), updating the flow in
+ * each setter keeps observers in sync without depending on a platform change-listener.
+ */
 class ObservableAppSettings(
-    private val settings: ObservableSettings,
-    scope: CoroutineScope,
+    private val settings: Settings,
     private val json: Json = Json { ignoreUnknownKeys = true; encodeDefaults = true },
 ) : AppSettings {
 
     private val pairingListSerializer = ListSerializer(PairingMetadata.serializer())
 
-    override val themeMode: StateFlow<ThemeMode> =
-        settings.getStringStateFlow(scope, SettingsKeys.THEME_MODE, ThemeMode.SYSTEM.name)
-            .map { it.toThemeModeOrDefault() }
-            .stateIn(scope, SharingStarted.Eagerly, settings.themeModeNow())
+    private val themeState = MutableStateFlow(readTheme())
+    private val lastState = MutableStateFlow(settings.getStringOrNull(SettingsKeys.LAST_PAIRING_ID))
+    private val pairingState = MutableStateFlow(readPairings())
 
-    override val lastPairingId: StateFlow<String?> =
-        settings.getStringOrNullStateFlow(scope, SettingsKeys.LAST_PAIRING_ID)
-
-    override val pairings: StateFlow<List<PairingMetadata>> =
-        settings.getStringStateFlow(scope, SettingsKeys.PAIRINGS, EMPTY_JSON_ARRAY)
-            .map { decodePairings(it) }
-            .stateIn(scope, SharingStarted.Eagerly, decodePairings(settings.pairingsJsonNow()))
+    override val themeMode: StateFlow<ThemeMode> = themeState.asStateFlow()
+    override val lastPairingId: StateFlow<String?> = lastState.asStateFlow()
+    override val pairings: StateFlow<List<PairingMetadata>> = pairingState.asStateFlow()
 
     override fun setThemeMode(mode: ThemeMode) {
         settings.putString(SettingsKeys.THEME_MODE, mode.name)
+        themeState.value = mode
     }
 
     override fun setLastPairingId(id: String?) {
-        if (id == null) settings.remove(SettingsKeys.LAST_PAIRING_ID)
-        else settings.putString(SettingsKeys.LAST_PAIRING_ID, id)
+        if (id == null) settings.remove(SettingsKeys.LAST_PAIRING_ID) else settings.putString(SettingsKeys.LAST_PAIRING_ID, id)
+        lastState.value = id
     }
 
     override fun setPairings(list: List<PairingMetadata>) {
         settings.putString(SettingsKeys.PAIRINGS, json.encodeToString(pairingListSerializer, list))
+        pairingState.value = list
     }
 
     override fun upsertPairing(metadata: PairingMetadata) {
-        val next = pairings.value.filterNot { it.id == metadata.id } + metadata
-        setPairings(next)
+        setPairings(pairingState.value.filterNot { it.id == metadata.id } + metadata)
     }
 
     override fun removePairing(id: String) {
-        setPairings(pairings.value.filterNot { it.id == id })
+        setPairings(pairingState.value.filterNot { it.id == id })
     }
 
-    private fun decodePairings(raw: String): List<PairingMetadata> =
-        // Persisted JSON is app-owned data at a storage boundary; a malformed/legacy blob degrades to
-        // an empty list rather than crashing the UI. This is not masking a logic error.
-        runCatching { json.decodeFromString(pairingListSerializer, raw) }.getOrDefault(emptyList())
+    private fun readTheme(): ThemeMode =
+        // Persisted theme is app-owned data at a storage boundary; a malformed/legacy value degrades
+        // to SYSTEM rather than crashing the UI. This is not masking a logic error.
+        runCatching { ThemeMode.valueOf(settings.getString(SettingsKeys.THEME_MODE, ThemeMode.SYSTEM.name)) }
+            .getOrDefault(ThemeMode.SYSTEM)
 
-    private fun ObservableSettings.themeModeNow(): ThemeMode =
-        getString(SettingsKeys.THEME_MODE, ThemeMode.SYSTEM.name).toThemeModeOrDefault()
-
-    private fun ObservableSettings.pairingsJsonNow(): String =
-        getString(SettingsKeys.PAIRINGS, EMPTY_JSON_ARRAY)
-
-    private companion object {
-        const val EMPTY_JSON_ARRAY = "[]"
-    }
+    private fun readPairings(): List<PairingMetadata> =
+        runCatching { json.decodeFromString(pairingListSerializer, settings.getString(SettingsKeys.PAIRINGS, "[]")) }
+            .getOrDefault(emptyList())
 }
-
-private fun String.toThemeModeOrDefault(): ThemeMode =
-    runCatching { ThemeMode.valueOf(this) }.getOrDefault(ThemeMode.SYSTEM)

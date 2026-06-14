@@ -7,13 +7,11 @@ import org.koin.core.module.Module
 import org.koin.dsl.KoinAppDeclaration
 
 /**
- * Per-platform Koin module. Filled with real providers (SecureStore, ObservableSettings, etc.)
- * in later stories; kept minimal here so app behavior is unchanged until the DI graph is ready.
+ * Per-platform Koin module providing platform-backed singletons (SecureStore, Settings).
+ * The actual implementations live in each platform source set; [appModules] composes this with the
+ * shared feature modules.
  */
 expect fun platformModule(): Module
-
-/** Aggregate module list for the app. Expanded as feature modules are introduced. */
-fun appModules(): List<Module> = listOf(platformModule())
 
 /**
  * Idempotent Koin startup. Calling this more than once is a no-op that returns the existing

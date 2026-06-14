@@ -39,6 +39,9 @@ kotlin {
     sourceSets {
         val desktopMain by getting
 
+        // Platform boundary rule: commonMain MUST NOT depend on android.*, androidx.security.*,
+        // org.koin.android.*, or androidContext. Android-only deps (koin-android, security-crypto)
+        // live in androidMain; security-crypto is referenced only by AndroidSecureStore/Android DI.
         commonMain.dependencies {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
@@ -51,10 +54,17 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.ktor.client.core)
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.kermit)
+            implementation(libs.multiplatform.settings)
+            implementation(libs.navigation.compose)
         }
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.koin.android)
+            implementation(libs.androidx.security.crypto)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -71,6 +81,7 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.ktor.client.mock)
+            implementation(libs.koin.test)
         }
     }
 }

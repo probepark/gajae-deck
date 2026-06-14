@@ -1,0 +1,40 @@
+# gajae-deck web client — single-origin reverse proxy (EXAMPLE / template).
+#
+# Copy to ops/web-proxy/Caddyfile (gitignored) and adjust, or just set the env vars
+# below, then run from the repo root:
+#   caddy run --config ops/web-proxy/Caddyfile
+#
+# Why: the gjc bridge sends no CORS headers, so a browser served from a different origin
+# cannot call it. This fronts BOTH the static wasmJs web app and the bridge API on ONE
+# HTTPS origin, eliminating CORS. Native (Desktop/Android/iOS) clients don't need this.
+
+{
+	admin off
+	auto_https off
+}
+
+# Public origin. Over Tailscale, use your node's MagicDNS name and a real cert from
+# `tailscale cert <name>`. Locally you can use `localhost:8443` with `tls internal`.
+{$GAJAEDECK_PROXY_ADDR:localhost:8443} {
+	tls {$GAJAEDECK_TLS_CERT:ops/web-proxy/.certs/ts.crt} {$GAJAEDECK_TLS_KEY:ops/web-proxy/.certs/ts.key}
+
+	# Bridge API. Upstream is HTTPS with a self-signed cert -> skip verification.
+	# flush_interval -1 disables buffering so the SSE/NDJSON event stream stays live.
+	@bridge path /healthz /v1/*
+	handle @bridge {
+		reverse_proxy https://127.0.0.1:{$GJC_BRIDGE_PORT:4077} {
+			transport http {
+				tls_insecure_skip_verify
+			}
+			flush_interval -1
+		}
+	}
+
+	# Static wasmJs distribution served directly (stable; no gradle dev server in the loop).
+	# Rebuild with: ./gradlew :shared:wasmJsBrowserDevelopmentExecutableDistribution
+	handle {
+		root * {$GAJAEDECK_WEB_DIST:shared/build/dist/wasmJs/developmentExecutable}
+		try_files {path} /index.html
+		file_server
+	}
+}

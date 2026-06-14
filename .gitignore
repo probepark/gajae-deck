@@ -32,3 +32,8 @@ dist/
 *.token
 .env
 .env.*
+
+# Caddy web-proxy local certs/env/config (never commit; commit only *.example)
+ops/web-proxy/.certs/
+ops/web-proxy/*.env
+ops/web-proxy/Caddyfile

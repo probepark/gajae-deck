@@ -1,0 +1,34 @@
+# GJC workflow state/artifacts (local only)
+.gjc/
+
+# Build outputs
+build/
+.gradle/
+*/build/
+**/.kotlin/
+.kotlin/
+local.properties
+
+# Xcode / iOS
+*.xcuserstate
+xcuserdata/
+DerivedData/
+Pods/
+
+# Node/web
+node_modules/
+dist/
+.cache/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+*.iml
+.vscode/
+
+# Secrets / local bridge dev artifacts
+*.pem
+*.token
+.env
+.env.*

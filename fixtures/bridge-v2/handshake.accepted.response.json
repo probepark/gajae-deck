@@ -1,0 +1,17 @@
+{
+  "status": "accepted",
+  "protocol_version": 2,
+  "session_id": "<SESSION_ID>",
+  "accepted_capabilities": ["events","prompt","permission","workflow_gate","host_tools","host_uri","ui.declarative","elicitation"],
+  "accepted_scopes": ["prompt","control","bash","export","session","model","message:read","host_tools","host_uri","admin"],
+  "unsupported": [],
+  "endpoints": {
+    "events": "/v1/sessions/<SESSION_ID>/events",
+    "commands": "/v1/sessions/<SESSION_ID>/commands",
+    "uiResponses": "/v1/sessions/<SESSION_ID>/ui-responses/{correlation_id}",
+    "claimControl": "/v1/sessions/<SESSION_ID>/control:claim",
+    "disconnectControl": "/v1/sessions/<SESSION_ID>/control:disconnect",
+    "hostToolResults": "/v1/sessions/<SESSION_ID>/host-tool-results/{correlation_id}",
+    "hostUriResults": "/v1/sessions/<SESSION_ID>/host-uri-results/{correlation_id}"
+  }
+}

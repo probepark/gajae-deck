@@ -1,0 +1,12 @@
+{
+  "type": "response",
+  "command": "get_session_stats",
+  "success": true,
+  "data": {
+    "sessionFile": "<REDACTED_SESSION_FILE_PATH>",
+    "sessionId": "<SESSION_ID>",
+    "userMessages": 0, "assistantMessages": 0, "toolCalls": 0, "toolResults": 0, "totalMessages": 0,
+    "tokens": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0 },
+    "cost": 0, "premiumRequests": 0
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "status": "experimental_gated",
+  "message": "Bridge mode is experimental; session-control endpoints fail closed by default.",
+  "endpoints": {
+    "events": true, "commands": true, "control": true,
+    "uiResponses": true, "hostToolResults": true, "hostUriResults": true
+  }
+}

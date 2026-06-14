@@ -22,7 +22,7 @@ class IntegrationTest {
             BridgeStreamParser.parseFrame("""{"type":"workflow_gate","seq":4,"gate_id":"g1"}"""),
         )
         val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
-        val controller = SessionController(FakeBridgeTransport(frames = frames), scope)
+        val controller = SessionController(FakeBridgeConnector(FakeBridgeTransport(frames = frames)), scope)
 
         controller.connect()
         controller.sendPrompt("do the thing")

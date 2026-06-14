@@ -3,6 +3,7 @@ package io.devnogari.gajaedeck.ui
 import io.devnogari.gajaedeck.bridge.BridgeScope
 import io.devnogari.gajaedeck.bridge.BridgeStreamParser
 import io.devnogari.gajaedeck.bridge.ConnectionState
+import io.devnogari.gajaedeck.bridge.FakeBridgeConnector
 import io.devnogari.gajaedeck.bridge.FakeBridgeTransport
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
@@ -22,7 +23,7 @@ class SessionControllerTest {
     @Test
     fun connectStreamsFramesAndUpdatesState() = runTest {
         val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
-        val controller = SessionController(FakeBridgeTransport(frames = frames()), scope)
+        val controller = SessionController(FakeBridgeConnector(FakeBridgeTransport(frames = frames())), scope)
         controller.connect()
         val state = controller.state.value
         assertEquals(ConnectionState.CONNECTED_STREAMING, state.connection)
@@ -33,7 +34,7 @@ class SessionControllerTest {
     @Test
     fun allowedCommandLogsOk() = runTest {
         val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
-        val controller = SessionController(FakeBridgeTransport(frames = frames()), scope)
+        val controller = SessionController(FakeBridgeConnector(FakeBridgeTransport(frames = frames())), scope)
         controller.connect()
         controller.sendCommand("get_session_stats")
         assertTrue(controller.state.value.sentLog.any { it.contains("get_session_stats") && it.contains("ok") })
@@ -44,7 +45,7 @@ class SessionControllerTest {
     fun scopeDeniedCommandLogsError() = runTest {
         val scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler))
         val controller = SessionController(
-            FakeBridgeTransport(frames = frames(), grantedScopes = setOf(BridgeScope.MESSAGE_READ)),
+            FakeBridgeConnector(FakeBridgeTransport(frames = frames(), grantedScopes = setOf(BridgeScope.MESSAGE_READ))),
             scope,
         )
         controller.connect()

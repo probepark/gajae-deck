@@ -32,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.devnogari.gajaedeck.bridge.BridgeFrame
 import io.devnogari.gajaedeck.bridge.BridgeStreamParser
+import io.devnogari.gajaedeck.bridge.FakeBridgeConnector
+import io.devnogari.gajaedeck.bridge.KtorBridgeConnector
 import io.devnogari.gajaedeck.bridge.FakeBridgeTransport
 import io.devnogari.gajaedeck.ui.SessionController
 
@@ -52,9 +54,13 @@ fun App() {
 
             val active = controller
             if (active == null) {
-                PairingForm(onConnect = {
-                    val transport = FakeBridgeTransport(frames = sampleFrames())
-                    SessionController(transport, scope).also {
+                PairingForm(onConnect = { host, port, token ->
+                    val connector = if (token.isBlank()) {
+                        FakeBridgeConnector(FakeBridgeTransport(frames = sampleFrames()))
+                    } else {
+                        KtorBridgeConnector(baseUrl = "https://$host:$port", token = token)
+                    }
+                    SessionController(connector, scope).also {
                         it.connect()
                         controller = it
                     }
@@ -67,7 +73,7 @@ fun App() {
 }
 
 @Composable
-private fun PairingForm(onConnect: () -> Unit) {
+private fun PairingForm(onConnect: (host: String, port: String, token: String) -> Unit) {
     var host by remember { mutableStateOf("100.x.y.z") }
     var port by remember { mutableStateOf("4077") }
     var token by remember { mutableStateOf("") }
@@ -78,7 +84,9 @@ private fun PairingForm(onConnect: () -> Unit) {
         OutlinedTextField(host, { host = it }, label = { Text("Host") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(port, { port = it }, label = { Text("Port") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(token, { token = it }, label = { Text("Bearer token") }, modifier = Modifier.fillMaxWidth())
-        Button(onClick = onConnect, modifier = Modifier.fillMaxWidth()) { Text("연결 (오프라인 데모)") }
+        Button(onClick = { onConnect(host, port, token) }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (token.isBlank()) "오프라인 데모 연결" else "연결")
+        }
         Text(
             "메쉬(Tailscale/VPN)에서 도달 가능한 host:port + GJC_BRIDGE_TOKEN. 네이티브는 자체서명 TOFU, Web은 신뢰 인증서.",
             style = MaterialTheme.typography.bodySmall,

@@ -1,6 +1,7 @@
 package io.devnogari.gajaedeck.ui
 
 import io.devnogari.gajaedeck.bridge.BRIDGE_PROTOCOL_VERSION
+import io.devnogari.gajaedeck.bridge.BridgeConnector
 import io.devnogari.gajaedeck.bridge.BridgeException
 import io.devnogari.gajaedeck.bridge.BridgeFrame
 import io.devnogari.gajaedeck.bridge.BridgeHandshakeRequest
@@ -23,14 +24,18 @@ import kotlinx.serialization.json.put
 
 data class SessionUiState(
     val connection: ConnectionState = ConnectionState.PAIRING,
+    val sessionId: String? = null,
     val frames: List<BridgeFrame> = emptyList(),
     val sentLog: List<String> = emptyList(),
     val error: String? = null,
 )
 
-/** Drives a bridge session for the UI: connect → handshake → stream events; send commands. */
+/**
+ * Drives a bridge session for the UI: health → handshake → (session-scoped) stream events; send commands.
+ * Backed by a [BridgeConnector] so the same controller works against the live bridge or a fake.
+ */
 class SessionController(
-    private val transport: BridgeTransport,
+    private val connector: BridgeConnector,
     private val scope: CoroutineScope,
 ) {
     private val _state = MutableStateFlow(SessionUiState())
@@ -39,16 +44,17 @@ class SessionController(
     private val outbox = CommandOutbox()
     private val timeline = TimelineReducer()
     private val keys = IdempotencyKeys()
+    private var session: BridgeTransport? = null
 
     fun connect() {
         scope.launch {
             runCatching {
                 _state.update { it.copy(connection = ConnectionState.CHECKING_HEALTH, error = null) }
-                if (!transport.health()) {
+                if (!connector.health()) {
                     fail("health check failed")
                     return@launch
                 }
-                val handshake = transport.handshake(
+                val handshake = connector.handshake(
                     BridgeHandshakeRequest(
                         protocolVersionRange = ProtocolVersionRange(1, BRIDGE_PROTOCOL_VERSION),
                         capabilities = listOf("events", "prompt", "permission", "workflow_gate"),
@@ -59,7 +65,10 @@ class SessionController(
                     fail("handshake rejected: ${handshake.value.reason ?: "unknown"}")
                     return@launch
                 }
-                _state.update { it.copy(connection = ConnectionState.CONNECTED_STREAMING) }
+                val sessionId = (handshake as BridgeHandshakeResult.Accepted).value.sessionId
+                val transport = connector.sessionTransport(sessionId)
+                session = transport
+                _state.update { it.copy(connection = ConnectionState.CONNECTED_STREAMING, sessionId = sessionId) }
                 transport.events(timeline.state.lastSeq).collect { frame ->
                     timeline.accept(frame)
                     _state.update { it.copy(frames = it.frames + frame) }
@@ -76,6 +85,7 @@ class SessionController(
     fun sendCommand(type: String) = send(type, JsonObject(emptyMap()))
 
     private fun send(type: String, params: JsonObject) {
+        val transport = session ?: run { fail("not connected"); return }
         scope.launch {
             val key = keys.next(type)
             outbox.enqueue(key, type)

@@ -112,7 +112,11 @@ export function createApp(
     }
 
     const start = /^\/control\/v1\/projects\/([^/]+)\/sessions$/.exec(url.pathname);
-    if (start && req.method === "POST") return json(await registry.start(start[1]!));
+    if (start && req.method === "POST") {
+      let resume: string | undefined;
+      try { resume = ((await req.json()) as { resume?: string })?.resume; } catch {}
+      return json(await registry.start(start[1]!, resume ? { resume } : {}));
+    }
 
     const stop = /^\/control\/v1\/sessions\/([^/]+):stop$/.exec(url.pathname);
     if (stop && req.method === "POST") { registry.stop(stop[1]!); return json({ ok: true }); }

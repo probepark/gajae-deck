@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_push_deeplink_001",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "deepLink": "gajaedeck://notification/open?id=dl_opaque_01JZ0J4N0P9Q8R7S6T5V4W3X2Y",
+  "allowedQueryKeys": [
+    "id"
+  ],
+  "deepLinkOpaqueId": "dl_opaque_01JZ0J4N0P9Q8R7S6T5V4W3X2Y",
+  "forbiddenQueryKeys": [
+    "token",
+    "routeToken",
+    "controlToken",
+    "scopedToken",
+    "bridgeToken",
+    "ownerToken",
+    "deviceToken",
+    "sessionId",
+    "projectId",
+    "routeId",
+    "cwd",
+    "path",
+    "prompt",
+    "commandArgs",
+    "displayName"
+  ]
+}

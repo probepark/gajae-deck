@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_push_negative_corpus_001",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "purpose": "Dummy forbidden examples used to prove public push payloads never contain plaintext sensitive classes.",
+  "forbiddenPlaintextClasses": [
+    {
+      "class": "cwd",
+      "dummyExample": "/forbidden/dummy/cwd"
+    },
+    {
+      "class": "repo",
+      "dummyExample": "forbidden-repo-name"
+    },
+    {
+      "class": "customer",
+      "dummyExample": "forbidden-customer-name"
+    },
+    {
+      "class": "path",
+      "dummyExample": "/forbidden/dummy/path/file.kt"
+    },
+    {
+      "class": "prompt",
+      "dummyExample": "FORBIDDEN_DUMMY_PROMPT_TEXT"
+    },
+    {
+      "class": "commandArgs",
+      "dummyExample": "--forbidden-dummy-arg=value"
+    },
+    {
+      "class": "displayName",
+      "dummyExample": "Forbidden Dummy Project"
+    },
+    {
+      "class": "bearerToken",
+      "dummyExample": "Bearer FORBIDDEN_DUMMY_BEARER"
+    },
+    {
+      "class": "controlToken",
+      "dummyExample": "control_dummy_forbidden_token"
+    },
+    {
+      "class": "scopedToken",
+      "dummyExample": "scoped_dummy_forbidden_token"
+    },
+    {
+      "class": "bridgeToken",
+      "dummyExample": "bridge_dummy_forbidden_token"
+    },
+    {
+      "class": "ownerToken",
+      "dummyExample": "owner_dummy_forbidden_token"
+    },
+    {
+      "class": "apnsToken",
+      "dummyExample": "apns_dummy_forbidden_token"
+    },
+    {
+      "class": "fcmToken",
+      "dummyExample": "fcm_dummy_forbidden_token"
+    },
+    {
+      "class": "deviceToken",
+      "dummyExample": "device_dummy_forbidden_token"
+    },
+    {
+      "class": "deviceId",
+      "dummyExample": "device_dummy_forbidden_id"
+    }
+  ],
+  "allowedReplacementForms": [
+    "alias constants",
+    "opaque notification ids",
+    "opaque deep-link ids",
+    "hashes with *_h_* prefixes"
+  ]
+}

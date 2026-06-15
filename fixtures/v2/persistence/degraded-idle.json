@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_persist_degraded_idle_001",
+  "serverTime": "2026-06-14T16:35:00Z",
+  "policyHash": "pol_v2_persist_8f12",
+  "hostHash": "host_4b7a0c",
+  "policy": {
+    "idleSoftLimit": "2h"
+  },
+  "sessions": [
+    {
+      "sessionHash": "sess_f01cde",
+      "projectHash": "proj_98bc11",
+      "routeHash": "route_7acd02",
+      "status": "idle",
+      "lastFrameAge": "2h05m",
+      "visibility": "shown_in_sessions_list"
+    },
+    {
+      "sessionHash": "sess_f02def",
+      "projectHash": "proj_44bd22",
+      "routeHash": "route_8bde03",
+      "status": "degraded",
+      "degradedCode": "provider_credential_unavailable",
+      "retryable": true,
+      "visibility": "shown_in_sessions_list"
+    }
+  ],
+  "events": [
+    {
+      "event": "session.idle",
+      "sessionHash": "sess_f01cde",
+      "projectHash": "proj_98bc11"
+    },
+    {
+      "event": "session.degraded",
+      "sessionHash": "sess_f02def",
+      "projectHash": "proj_44bd22",
+      "code": "provider_credential_unavailable",
+      "retryable": true
+    }
+  ]
+}

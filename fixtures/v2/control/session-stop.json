@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "session": {
+    "id": "sess_7f3a",
+    "projectId": "proj_7f3a",
+    "routeIdHash": "hash_route_7f3a",
+    "gjcSessionId": "gjc_sess_7f3a",
+    "status": "stopped",
+    "scopes": [
+      "events",
+      "prompt",
+      "permission",
+      "ui_responses",
+      "claim_control"
+    ],
+    "startedAt": "2026-06-14T15:59:00Z",
+    "lastActiveAt": "2026-06-14T16:21:00Z",
+    "lastSeq": 42,
+    "bridgePid": null,
+    "restoreEligibility": "ineligible",
+    "skipReason": "manual_stop"
+  }
+}

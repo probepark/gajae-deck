@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "error": {
+    "code": "provider_unhealthy",
+    "message": "Push provider health check failed.",
+    "retryable": true,
+    "details": {
+      "provider": "apns_alias",
+      "credentialAlias": "credential_alias_apns_sandbox",
+      "deviceHash": "dev_hash_7f3a"
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_persist_metrics_001",
+  "serverTime": "2026-06-14T16:36:00Z",
+  "hostHash": "host_4b7a0c",
+  "policyHash": "pol_v2_persist_8f12",
+  "events": [
+    { "event": "restore.attempt", "count": 4 },
+    { "event": "restore.success", "count": 3 },
+    { "event": "restore.skipped", "reason": "max_restored_sessions", "count": 1 },
+    { "event": "restore.skipped", "reason": "stale_ttl", "count": 1 },
+    { "event": "restore.skipped", "reason": "crash_loop_cap", "count": 1 },
+    { "event": "crash_loop.backoff", "count": 1 },
+    { "event": "session.degraded", "count": 1 },
+    { "event": "session.idle", "count": 1 }
+  ],
+  "metrics": [
+    {
+      "name": "supervisor_restore_attempt_total",
+      "type": "counter",
+      "labels": { "hostHash": "host_4b7a0c", "policyHash": "pol_v2_persist_8f12" },
+      "value": 4
+    },
+    {
+      "name": "supervisor_restore_success_total",
+      "type": "counter",
+      "labels": { "hostHash": "host_4b7a0c", "policyHash": "pol_v2_persist_8f12" },
+      "value": 3
+    },
+    {
+      "name": "supervisor_restore_skipped_total",
+      "type": "counter",
+      "labels": { "hostHash": "host_4b7a0c", "policyHash": "pol_v2_persist_8f12", "reason": "max_restored_sessions" },
+      "value": 1
+    },
+    {
+      "name": "supervisor_restore_skipped_total",
+      "type": "counter",
+      "labels": { "hostHash": "host_4b7a0c", "policyHash": "pol_v2_persist_8f12", "reason": "stale_ttl" },
+      "value": 1
+    },
+    {
+      "name": "supervisor_restore_skipped_total",
+      "type": "counter",
+      "labels": { "hostHash": "host_4b7a0c", "policyHash": "pol_v2_persist_8f12", "reason": "crash_loop_cap" },
+      "value": 1
+    },
+    {
+      "name": "supervisor_crash_loop_backoff_total",
+      "type": "counter",
+      "labels": { "sessionHash": "sess_e5c012", "projectHash": "proj_aa6f31" },
+      "value": 1
+    },
+    {
+      "name": "supervisor_session_degraded",
+      "type": "gauge",
+      "labels": { "sessionHash": "sess_f02def", "projectHash": "proj_44bd22" },
+      "value": 1
+    },
+    {
+      "name": "supervisor_session_idle",
+      "type": "gauge",
+      "labels": { "sessionHash": "sess_f01cde", "projectHash": "proj_98bc11" },
+      "value": 1
+    },
+    {
+      "name": "supervisor_restored_sessions_current",
+      "type": "gauge",
+      "labels": { "hostHash": "host_4b7a0c", "policyHash": "pol_v2_persist_8f12" },
+      "value": 3
+    }
+  ]
+}

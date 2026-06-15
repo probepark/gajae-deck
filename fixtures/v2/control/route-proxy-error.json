@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "error": {
+    "code": "bridge_unhealthy",
+    "message": "Route proxy could not establish a healthy bridge stream.",
+    "retryable": true,
+    "details": {
+      "routeIdHash": "hash_route_7f3a",
+      "upstream": "bridge_alias_primary"
+    }
+  }
+}

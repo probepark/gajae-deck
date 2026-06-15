@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_persist_crash_loop_001",
+  "serverTime": "2026-06-14T16:34:00Z",
+  "policyHash": "pol_v2_persist_8f12",
+  "hostHash": "host_4b7a0c",
+  "restore": {
+    "trigger": "supervisor_restart",
+    "attempted": 1,
+    "restored": 0,
+    "skipped": 1,
+    "budget": {
+      "crashLoopWindow": "10m",
+      "crashLoopMaxRestarts": 3,
+      "crashLoopBackoff": {
+        "schedule": ["5s", "30s", "2m"],
+        "cap": "10m",
+        "jitterMaxPercent": 20
+      }
+    },
+    "sessions": [
+      {
+        "sessionHash": "sess_e5c012",
+        "projectHash": "proj_aa6f31",
+        "routeHash": "route_f118c4",
+        "status": "skipped",
+        "skipReason": "crash_loop_cap",
+        "restartCountInWindow": 3,
+        "windowAge": "10m",
+        "lastBackoff": "2m"
+      }
+    ]
+  },
+  "events": [
+    {
+      "event": "crash_loop.backoff",
+      "sessionHash": "sess_e5c012",
+      "projectHash": "proj_aa6f31",
+      "backoff": "2m"
+    },
+    {
+      "event": "restore.skipped",
+      "reason": "crash_loop_cap",
+      "sessionHash": "sess_e5c012",
+      "projectHash": "proj_aa6f31"
+    }
+  ]
+}

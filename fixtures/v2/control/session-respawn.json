@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "session": {
+    "id": "sess_7f3a",
+    "projectId": "proj_7f3a",
+    "routeIdHash": "hash_route_8b2c",
+    "gjcSessionId": "gjc_sess_7f3a",
+    "status": "ready",
+    "scopes": [
+      "events",
+      "prompt",
+      "permission",
+      "ui_responses",
+      "claim_control"
+    ],
+    "startedAt": "2026-06-14T16:21:30Z",
+    "lastActiveAt": "2026-06-14T16:21:30Z",
+    "lastSeq": 0,
+    "bridgePid": 4242,
+    "restoreEligibility": "eligible"
+  },
+  "route": {
+    "sessionId": "sess_7f3a",
+    "projectId": "proj_7f3a",
+    "routeId": "route_opaque_8b2c",
+    "routePath": "/s/route_opaque_8b2c",
+    "baseUrl": "https://control.example.invalid",
+    "scopedToken": "scoped_route_token_alias_8b2c",
+    "scopes": [
+      "events",
+      "prompt",
+      "permission",
+      "ui_responses",
+      "claim_control"
+    ],
+    "expiresAt": null,
+    "revocation": "respawn_required",
+    "ownerToken": "owner_token_alias_8b2c"
+  }
+}

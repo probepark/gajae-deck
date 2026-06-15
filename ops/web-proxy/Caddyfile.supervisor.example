@@ -1,0 +1,25 @@
+{
+	admin off
+}
+
+:443 {
+	encode zstd gzip
+
+	handle /control/* {
+		reverse_proxy 127.0.0.1:8787 {
+			flush_interval -1
+		}
+	}
+
+	handle /s/* {
+		reverse_proxy 127.0.0.1:8787 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /var/www/gajae-deck/wasm-dist
+		try_files {path} /index.html
+		file_server
+	}
+}

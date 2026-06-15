@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "projects": [
+    {
+      "id": "proj_7f3a",
+      "displayAlias": "project_alias_alpha",
+      "cwdHash": "hash_cwd_7f3a",
+      "status": "running",
+      "lastActiveAt": "2026-06-14T16:18:30Z",
+      "lastSessionId": "sess_7f3a",
+      "autostart": "recent",
+      "health": "ok",
+      "safeSummaryAlias": "summary_alias_active"
+    },
+    {
+      "id": "proj_91bd",
+      "displayAlias": "project_alias_beta",
+      "cwdHash": "hash_cwd_91bd",
+      "status": "stopped",
+      "lastActiveAt": "2026-06-14T14:12:00Z",
+      "lastSessionId": null,
+      "autostart": "manual",
+      "health": "ok",
+      "safeSummaryAlias": "summary_alias_stopped"
+    }
+  ]
+}

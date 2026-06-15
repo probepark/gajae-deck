@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_push_fcm_001",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "provider": "fcm",
+  "message": {
+    "tokenAlias": "device_h_6d5a4c3b2a10",
+    "notification": {
+      "title_loc_key": "input_needed",
+      "body_loc_key": "open_app_to_continue"
+    },
+    "data": {
+      "schemaVersion": "1",
+      "notificationId": "ntf_opaque_01JZ0J4M9K8W7Y6X5V4T3S2R1Q",
+      "safeTitleAlias": "input_needed",
+      "safeBodyAlias": "open_app_to_continue",
+      "category": "gate.input_needed",
+      "collapseIdHash": "col_h_4f6e2a91c0bd",
+      "threadIdHash": "thr_h_9db028d21e0a",
+      "deepLinkOpaqueId": "dl_opaque_01JZ0J4N0P9Q8R7S6T5V4W3X2Y",
+      "createdAtBucket": "2026-06-14T16:15:00Z"
+    },
+    "android": {
+      "collapse_key": "col_h_4f6e2a91c0bd",
+      "ttl": "900s",
+      "priority": "HIGH"
+    },
+    "apns": {
+      "headers": {
+        "apns-collapse-id": "col_h_4f6e2a91c0bd",
+        "apns-expiration": "1781454900"
+      }
+    }
+  }
+}

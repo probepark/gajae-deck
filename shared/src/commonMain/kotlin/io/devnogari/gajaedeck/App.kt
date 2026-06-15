@@ -2,41 +2,50 @@ package io.devnogari.gajaedeck
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
-import io.devnogari.gajaedeck.auth.SecureStore
+import androidx.navigation.compose.rememberNavController
+import io.devnogari.gajaedeck.auth.StoredControlPlane
+import io.devnogari.gajaedeck.control.ControlPlaneRepository
+import io.devnogari.gajaedeck.control.KtorControlPlaneClient
 import io.devnogari.gajaedeck.navigation.AppNavHost
-import io.devnogari.gajaedeck.pairing.PairingRepository
 import io.devnogari.gajaedeck.settings.AppSettings
 import io.devnogari.gajaedeck.theme.GajaeDeckTheme
-import io.devnogari.gajaedeck.ui.SessionControllerFactory
+import io.devnogari.gajaedeck.ui.ControlSessionControllerFactory
 import org.koin.compose.koinInject
 
-/**
- * Koin-backed composition root. Pulls the app graph from Koin (started by each platform entry point
- * via initGajaeDeckKoinOnce), applies the gajae-deck theme from the persisted theme mode, and renders
- * the navigation host. No connectors or controllers are constructed here — that is owned by
- * [SessionControllerFactory] / [PairingRepository].
- */
 @Composable
-fun App() {
-    val appSettings = koinInject<AppSettings>()
-    val pairingRepository = koinInject<PairingRepository>()
-    val sessionControllerFactory = koinInject<SessionControllerFactory>()
-    val secureStore = koinInject<SecureStore>()
+fun App(storageLowerAssurance: Boolean = false) {
+    val controlPlaneRepository: ControlPlaneRepository = koinInject()
+    val appSettings: AppSettings = koinInject()
+    val stored = produceState<StoredControlPlane?>(initialValue = null, controlPlaneRepository) {
+        value = controlPlaneRepository.list().firstOrNull()
+    }.value
 
-    val themeMode by appSettings.themeMode.collectAsState()
-
-    GajaeDeckTheme(themeMode = themeMode) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            AppNavHost(
-                pairingRepository = pairingRepository,
-                appSettings = appSettings,
-                storageLowerAssurance = secureStore.assurance.isLowerAssurance,
-                sessionControllerFactory = sessionControllerFactory,
-            )
+    GajaeDeckTheme {
+        Surface(Modifier.fillMaxSize()) {
+            val controlPlane = stored
+            if (controlPlane == null) {
+                Text("No control plane configured")
+            } else {
+                val controlPlaneClient = KtorControlPlaneClient(
+                    supervisorBaseUrl = controlPlane.supervisorBaseUrl,
+                    controlToken = controlPlane.controlToken,
+                )
+                AppNavHost(
+                    navController = rememberNavController(),
+                    controlPlaneRepository = controlPlaneRepository,
+                    controlPlaneClient = controlPlaneClient,
+                        appSettings = appSettings,
+                    controlSessionControllerFactory = ControlSessionControllerFactory(
+                        repository = controlPlaneRepository,
+                        controlPlaneClient = controlPlaneClient,
+                    ),
+                    storageLowerAssurance = storageLowerAssurance,
+                )
+            }
         }
     }
 }

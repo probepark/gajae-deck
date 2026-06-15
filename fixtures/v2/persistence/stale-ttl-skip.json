@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_persist_stale_ttl_001",
+  "serverTime": "2026-06-14T16:32:00Z",
+  "policyHash": "pol_v2_persist_8f12",
+  "hostHash": "host_4b7a0c",
+  "restore": {
+    "trigger": "host_restart",
+    "attempted": 1,
+    "restored": 0,
+    "skipped": 1,
+    "budget": {
+      "staleSessionTtl": "12h"
+    },
+    "sessions": [
+      {
+        "sessionHash": "sess_d5420e",
+        "projectHash": "proj_c474f0",
+        "routeHash": "route_0fb9a1",
+        "lastActiveAge": "12h01m",
+        "status": "skipped",
+        "skipReason": "stale_ttl"
+      }
+    ]
+  },
+  "events": [
+    {
+      "event": "restore.skipped",
+      "reason": "stale_ttl",
+      "sessionHash": "sess_d5420e",
+      "projectHash": "proj_c474f0"
+    }
+  ]
+}

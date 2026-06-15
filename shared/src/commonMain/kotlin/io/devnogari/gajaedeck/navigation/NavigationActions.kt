@@ -2,13 +2,18 @@ package io.devnogari.gajaedeck.navigation
 
 import androidx.navigation.NavHostController
 
-/**
- * Typed navigation entry points over a [NavHostController]. Created per-NavHost (no global singleton),
- * so navigation is testable and scoped to the composition that owns the controller.
- */
+/** Navigation helpers keep secrets out of route arguments/back stack. */
 class NavigationActions(private val navController: NavHostController) {
-    fun openSession(pairingId: String) {
-        navController.navigate(SessionRoute(pairingId))
+    fun openProjects() {
+        navController.navigate(ProjectsRoute)
+    }
+
+    fun openProjectSessions(projectId: String) {
+        navController.navigate(ProjectSessionsRoute(projectId))
+    }
+
+    fun openSession(sessionId: String) {
+        navController.navigate(SessionRoute(sessionId))
     }
 
     fun openSettings() {

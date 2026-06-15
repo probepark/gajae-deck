@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "error": {
+    "code": "idempotency_conflict",
+    "message": "Idempotency key was reused for a different request.",
+    "retryable": false,
+    "details": {
+      "idempotencyKeyHash": "idem_h_conflict",
+      "requestHash": "req_h_7f3a"
+    }
+  }
+}

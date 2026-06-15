@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "counters": {
+    "restore.attempt": 3,
+    "restore.success": 2,
+    "restore.skipped": {
+      "stale_ttl": 1,
+      "crash_loop_cap": 1
+    },
+    "route.reject": {
+      "route_token_mismatch": 1,
+      "scope_denied": 1
+    },
+    "crash_loop.backoff": 2,
+    "crash_loop.cap": 1,
+    "push.sent": {
+      "apns": 4,
+      "fcm": 3
+    },
+    "push.failed": {
+      "apns": 1,
+      "fcm": 0
+    },
+    "session.start": 3,
+    "session.stop": 1,
+    "session.respawn": 1,
+    "gate.resolved": 5
+  },
+  "gauges": {
+    "provider.credential_health": {
+      "apns": 1,
+      "fcm": 0
+    },
+    "bridge.ready": 1,
+    "bridge.idle": 1,
+    "bridge.degraded": 0,
+    "supervisor_restored_sessions_current": {
+      "host_4b7a0c": {
+        "pol_v2_persist_8f12": 0
+      }
+    },
+    "supervisor_session_degraded": {},
+    "supervisor_session_idle": {}
+  },
+  "labels": {
+    "projectHash": "hash_project_7f3a",
+    "sessionHash": "hash_session_7f3a",
+    "routeHash": "hash_route_7f3a",
+    "collapseIdHash": "col_h_4f6e2a91c0bd"
+  }
+}

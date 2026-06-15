@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "ready": true,
+  "checks": {
+    "config": true,
+    "stateLock": true,
+    "listener": true
+  }
+}

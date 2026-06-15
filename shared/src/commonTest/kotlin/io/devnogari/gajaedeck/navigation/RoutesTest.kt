@@ -7,17 +7,28 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class RoutesTest {
-
     @Test
-    fun sessionRouteRoundTripsByPairingId() {
-        val route = SessionRoute("host:4077")
+    fun sessionRouteRoundTripsBySessionId() {
+        val route = SessionRoute("session-123")
         val encoded = Json.encodeToString(SessionRoute.serializer(), route)
         assertEquals(route, Json.decodeFromString(SessionRoute.serializer(), encoded))
-        assertTrue(encoded.contains("host:4077"))
+        assertTrue(encoded.contains("session-123"))
+    }
+
+    @Test
+    fun projectSessionsRouteRoundTripsByProjectId() {
+        val route = ProjectSessionsRoute("project-123")
+        val encoded = Json.encodeToString(ProjectSessionsRoute.serializer(), route)
+        assertEquals(route, Json.decodeFromString(ProjectSessionsRoute.serializer(), encoded))
+        assertTrue(encoded.contains("project-123"))
     }
 
     @Test
     fun parameterlessRoutesAreStableSingletons() {
+        assertEquals(
+            ProjectsRoute,
+            Json.decodeFromString(ProjectsRoute.serializer(), Json.encodeToString(ProjectsRoute.serializer(), ProjectsRoute)),
+        )
         assertEquals(
             PairingsListRoute,
             Json.decodeFromString(PairingsListRoute.serializer(), Json.encodeToString(PairingsListRoute.serializer(), PairingsListRoute)),
@@ -30,8 +41,8 @@ class RoutesTest {
 
     @Test
     fun sessionRouteCarriesNoSecret() {
-        // Type-safe routes must carry only a pairing id, never a token/secret (it would leak into the backstack).
-        val encoded = Json.encodeToString(SessionRoute.serializer(), SessionRoute("p1"))
+        val encoded = Json.encodeToString(SessionRoute.serializer(), SessionRoute("s1"))
         assertFalse(encoded.contains("token"), "route must not embed a token: $encoded")
+        assertFalse(encoded.contains("owner"), "route must not embed owner token: $encoded")
     }
 }

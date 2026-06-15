@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_persist_max_restored_001",
+  "serverTime": "2026-06-14T16:33:00Z",
+  "policyHash": "pol_v2_persist_8f12",
+  "hostHash": "host_4b7a0c",
+  "restore": {
+    "trigger": "supervisor_restart",
+    "attempted": 4,
+    "restored": 3,
+    "skipped": 1,
+    "budget": {
+      "maxRestoredSessions": 3
+    },
+    "sessions": [
+      { "sessionHash": "sess_101aaa", "projectHash": "proj_700001", "lastActiveAge": "2m", "status": "restored", "budgetRank": 1 },
+      { "sessionHash": "sess_202bbb", "projectHash": "proj_700002", "lastActiveAge": "9m", "status": "restored", "budgetRank": 2 },
+      { "sessionHash": "sess_303ccc", "projectHash": "proj_700003", "lastActiveAge": "45m", "status": "restored", "budgetRank": 3 },
+      {
+        "sessionHash": "sess_404ddd",
+        "projectHash": "proj_700004",
+        "lastActiveAge": "53m",
+        "status": "skipped",
+        "budgetRank": 4,
+        "skipReason": "max_restored_sessions"
+      }
+    ]
+  },
+  "events": [
+    { "event": "restore.success", "count": 3 },
+    { "event": "restore.skipped", "reason": "max_restored_sessions", "sessionHash": "sess_404ddd", "projectHash": "proj_700004" }
+  ]
+}

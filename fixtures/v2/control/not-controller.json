@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "error": {
+    "code": "not_controller",
+    "message": "Control owner does not match the active controller.",
+    "retryable": false,
+    "details": {
+      "ownerAlias": "owner_alias_other",
+      "activeOwnerHash": "owner_h_7f3a"
+    }
+  }
+}

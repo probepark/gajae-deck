@@ -37,3 +37,7 @@ dist/
 ops/web-proxy/.certs/
 ops/web-proxy/*.env
 ops/web-proxy/Caddyfile
+
+# Supervisor runtime state & local QA artifacts (local only)
+/state/
+/artifacts/

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "error": {
+    "code": "route_token_mismatch",
+    "message": "Route token is not bound to the requested route.",
+    "retryable": false,
+    "details": {
+      "requestedRouteHash": "hash_route_requested",
+      "tokenRouteHash": "hash_route_bound",
+      "bridgeContacted": false
+    }
+  }
+}

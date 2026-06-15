@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "disconnected": true,
+  "controller": {
+    "ownerAlias": "owner_alias_7f3a",
+    "releasedAt": "2026-06-14T16:21:00Z"
+  },
+  "idempotencyKeyHash": "idem_h_7f3a"
+}

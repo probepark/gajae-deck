@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_01JSAFE000000000000000000",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "status": "degraded",
+  "supervisor": {
+    "status": "ok",
+    "versionAlias": "supervisor_version_alias"
+  },
+  "config": {
+    "status": "ok"
+  },
+  "provider": {
+    "status": "degraded",
+    "code": "provider_unhealthy"
+  },
+  "store": {
+    "status": "ok"
+  },
+  "bridges": {
+    "ready": 1,
+    "idle": 1,
+    "degraded": 0,
+    "stopped": 1
+  }
+}

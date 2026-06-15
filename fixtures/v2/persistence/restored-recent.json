@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_persist_restore_recent_001",
+  "serverTime": "2026-06-14T16:31:00Z",
+  "policyHash": "pol_v2_persist_8f12",
+  "hostHash": "host_4b7a0c",
+  "restore": {
+    "trigger": "supervisor_restart",
+    "attempted": 3,
+    "restored": 3,
+    "skipped": 0,
+    "budget": {
+      "maxRestoredSessions": 3,
+      "staleSessionTtl": "12h"
+    },
+    "sessions": [
+      {
+        "sessionHash": "sess_a31f09",
+        "projectHash": "proj_16c9e1",
+        "routeHash": "route_6e42aa",
+        "lastActiveAge": "4m",
+        "status": "restored"
+      },
+      {
+        "sessionHash": "sess_b80d72",
+        "projectHash": "proj_28a7d4",
+        "routeHash": "route_22d5bc",
+        "lastActiveAge": "37m",
+        "status": "restored"
+      },
+      {
+        "sessionHash": "sess_c19ab3",
+        "projectHash": "proj_935cc8",
+        "routeHash": "route_91fa03",
+        "lastActiveAge": "1h43m",
+        "status": "restored"
+      }
+    ]
+  },
+  "events": [
+    { "event": "restore.attempt", "count": 3 },
+    { "event": "restore.success", "count": 3 }
+  ]
+}

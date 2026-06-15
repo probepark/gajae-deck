@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_push_alias_renderer_001",
+  "serverTime": "2026-06-14T16:20:00Z",
+  "input": {
+    "safeTitleAlias": "input_needed",
+    "safeBodyAlias": "open_app_to_continue",
+    "gateKind": "permission_request"
+  },
+  "output": {
+    "title": "Input needed",
+    "body": "Open the app to continue.",
+    "category": "gate.input_needed"
+  },
+  "allowlist": {
+    "safeTitleAlias": [
+      "input_needed"
+    ],
+    "safeBodyAlias": [
+      "open_app_to_continue"
+    ],
+    "categories": [
+      "gate.input_needed"
+    ]
+  }
+}

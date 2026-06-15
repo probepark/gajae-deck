@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "requestId": "req_persist_default_policy_001",
+  "serverTime": "2026-06-14T16:30:00Z",
+  "policy": {
+    "maxRestoredSessions": 3,
+    "staleSessionTtl": "12h",
+    "crashLoopWindow": "10m",
+    "crashLoopMaxRestarts": 3,
+    "crashLoopBackoff": {
+      "schedule": ["5s", "30s", "2m"],
+      "cap": "10m",
+      "jitterMaxPercent": 20
+    },
+    "idleSoftLimit": "2h"
+  },
+  "restoreSkipReasons": [
+    "stale_ttl",
+    "max_restored_sessions",
+    "crash_loop_cap",
+    "project_missing",
+    "cwd_unavailable",
+    "config_changed",
+    "credential_unavailable",
+    "manual_stop",
+    "route_invalid"
+  ],
+  "redaction": {
+    "identifierPolicy": "hashes_and_aliases_only",
+    "prohibitedPlaintext": [
+      "cwd",
+      "repo",
+      "customer",
+      "path",
+      "prompt",
+      "command_args",
+      "displayName",
+      "tokens",
+      "device_tokens"
+    ]
+  }
+}

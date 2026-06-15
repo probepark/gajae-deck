@@ -85,7 +85,7 @@ class SessionController(
 
     fun sendPrompt(text: String) {
         if (text.isBlank()) return
-        send("prompt", buildJsonObject { put("text", text) })
+        send("prompt", buildJsonObject { put("message", text) })
     }
 
     fun sendCommand(type: String) = send(type, JsonObject(emptyMap()))

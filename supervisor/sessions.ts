@@ -13,6 +13,19 @@ export interface SessionRoute { sessionId: string; projectId: string; routeId: s
 export interface Session { id: string; projectId: string; routeId: string; routeIdHash: string; gjcSessionId: string; status: SessionStatus; scopes: string[]; startedAt: string; lastActiveAt: string; lastSeq: number; bridgePid: number | null; restoreEligibility: "eligible" | "ineligible" | "skipped"; bridgeUrl: string; bridgeToken: string; routeToken: string; skipReason?: RestoreSkipReason; degradedReason?: string; idleSince?: string; proc?: Subprocess }
 export interface PersistedSessionMeta { id: string; projectId: string; projectHash: string; routeHash: string; routeId?: string; gjcSessionId: string; status: SessionStatus; scopes: string[]; startedAt: string; lastActiveAt: string; lastSeq: number; restoreEligibility: "eligible" | "ineligible"; crashRestarts?: string[]; policyHash?: string }
 
+async function waitForBridge(bridgeUrl: string, token: string, proc: Subprocess, timeoutMs = 8000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (proc.exitCode !== null) return false;
+    try {
+      const res = await fetch(`${bridgeUrl}/healthz`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(1000) });
+      if (res.ok || res.status === 401 || res.status === 403) return true;
+    } catch {}
+    await Bun.sleep(150);
+  }
+  return false;
+}
+
 export class SessionRegistry {
   sessions = new Map<string, Session>();
   routes = new Map<string, string>();
@@ -30,10 +43,11 @@ export class SessionRegistry {
     let proc: Subprocess | undefined; let pid = 4242;
     if (!bridgeUrl) {
       const port = 35_000 + Math.floor(Math.random() * 10_000);
-      bridgeUrl = `http://${this.config.bridgeHost}:${port}`;
-      proc = spawn({ cmd: this.config.bridgeCommand, cwd: project.cwd, env: { ...Bun.env, GJC_BRIDGE_TOKEN: bridgeToken, GJC_BRIDGE_HOST: this.config.bridgeHost, GJC_BRIDGE_PORT: String(port), GJC_BRIDGE_ENDPOINTS: "all", GJC_BRIDGE_SCOPES: defaultScopes().join(",") }, stdout: "ignore", stderr: "ignore" });
+      const scheme = this.config.bridgeTls ? "https" : "http";
+      bridgeUrl = `${scheme}://${this.config.bridgeHost}:${port}`;
+      proc = spawn({ cmd: this.config.bridgeCommand, cwd: project.cwd, env: { ...Bun.env, GJC_BRIDGE_TOKEN: bridgeToken, GJC_BRIDGE_HOST: this.config.bridgeHost, GJC_BRIDGE_PORT: String(port), GJC_BRIDGE_ENDPOINTS: "all", GJC_BRIDGE_SCOPES: this.config.bridgeScopes.join(","), ...(this.config.bridgeTls ? { GJC_BRIDGE_TLS_CERT: this.config.bridgeTls.cert, GJC_BRIDGE_TLS_KEY: this.config.bridgeTls.key } : {}) }, stdout: "ignore", stderr: "ignore" });
       pid = proc.pid ?? 0;
-      await Bun.sleep(30);
+      await waitForBridge(bridgeUrl, bridgeToken, proc);
     }
     const claim: Omit<RouteClaim, "tokenHash"> = { routeId, sessionId: id, projectId, scopes: defaultScopes(), issuedAt: new Date().toISOString() };
     const routeToken = mintScopedToken(claim, opts.scopedTokenAlias ?? (projectId === "proj_7f3a" ? "scoped_route_token_alias_7f3a" : undefined));

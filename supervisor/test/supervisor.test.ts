@@ -44,11 +44,11 @@ describe("sessions and proxy", () => {
   test("spawn env includes bridge contract and cwd", async () => {
     const app = createApp(defaultConfig({ bridgeCommand: [process.execPath, "-e", "await Bun.write(Bun.env.OUT, JSON.stringify({token:Bun.env.GJC_BRIDGE_TOKEN,host:Bun.env.GJC_BRIDGE_HOST,port:Bun.env.GJC_BRIDGE_PORT,endpoints:Bun.env.GJC_BRIDGE_ENDPOINTS,scopes:Bun.env.GJC_BRIDGE_SCOPES,cwd:process.cwd()})); await new Promise(()=>{})"] }));
     const out = `${process.cwd()}/test-spawn-env.json`;
-    app.config.bridgeCommand = [process.execPath, "-e", `await Bun.write(${JSON.stringify(out)}, JSON.stringify({token:Bun.env.GJC_BRIDGE_TOKEN,host:Bun.env.GJC_BRIDGE_HOST,port:Bun.env.GJC_BRIDGE_PORT,endpoints:Bun.env.GJC_BRIDGE_ENDPOINTS,scopes:Bun.env.GJC_BRIDGE_SCOPES,cwd:process.cwd()})); await new Promise(()=>{})`];
+    app.config.bridgeCommand = [process.execPath, "-e", `Bun.serve({port:Number(Bun.env.GJC_BRIDGE_PORT),hostname:Bun.env.GJC_BRIDGE_HOST,fetch(){return new Response('ok')}}); await Bun.write(${JSON.stringify(out)}, JSON.stringify({token:Bun.env.GJC_BRIDGE_TOKEN,host:Bun.env.GJC_BRIDGE_HOST,port:Bun.env.GJC_BRIDGE_PORT,endpoints:Bun.env.GJC_BRIDGE_ENDPOINTS,scopes:Bun.env.GJC_BRIDGE_SCOPES,cwd:process.cwd()})); await new Promise(()=>{})`];
     const res = await app.registry.start("proj_7f3a");
     await Bun.sleep(80);
     const env = JSON.parse(await Bun.file(out).text());
-    expect(env.token).toStartWith("bridge_"); expect(env.host).toBe("127.0.0.1"); expect(env.port).toBeTruthy(); expect(env.endpoints).toBe("all"); expect(env.scopes).toContain("events"); expect(env.cwd).toBe(process.cwd());
+    expect(env.token).toStartWith("bridge_"); expect(env.host).toBe("127.0.0.1"); expect(env.port).toBeTruthy(); expect(env.endpoints).toBe("all"); expect(env.scopes).toContain("prompt"); expect(env.scopes).toContain("control"); expect(env.scopes).not.toContain("events"); expect(env.cwd).toBe(process.cwd());
     app.registry.stop(res.session.id); await Bun.file(out).delete();
   });
   test("route mismatch returns 403 and does not contact bridge", async () => {

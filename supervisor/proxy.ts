@@ -18,6 +18,13 @@ const ROUTE_ENDPOINTS: readonly RouteEndpoint[] = [
   { method: "POST", pattern: /^\/v1\/sessions\/[^/]+\/disconnect-control$/, requiredScope: "claim_control" },
   { method: "POST", pattern: /^\/v1\/sessions\/[^/]+\/host-tool-results$/, requiredScope: "permission" },
   { method: "POST", pattern: /^\/v1\/sessions\/[^/]+\/host-uri-results$/, requiredScope: "permission" },
+  // Real gjc bridge protocol forms (POST handshake; colon control verbs; correlation-id suffixes).
+  { method: "POST", pattern: /^\/v1\/handshake$/, requiredScope: "events" },
+  { method: "POST", pattern: /^\/v1\/sessions\/[^/]+\/control:claim$/, requiredScope: "claim_control" },
+  { method: "POST", pattern: /^\/v1\/sessions\/[^/]+\/control:disconnect$/, requiredScope: "claim_control" },
+  { method: "POST", pattern: /^\/v1\/sessions\/[^/]+\/ui-responses\/[^/]+$/, requiredScope: "ui_responses" },
+  { method: "POST", pattern: /^\/v1\/sessions\/[^/]+\/host-tool-results\/[^/]+$/, requiredScope: "permission" },
+  { method: "POST", pattern: /^\/v1\/sessions\/[^/]+\/host-uri-results\/[^/]+$/, requiredScope: "permission" },
 ];
 
 function requiredScopeFor(method: string, pathname: string): RouteScope | undefined {

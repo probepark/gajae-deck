@@ -102,6 +102,15 @@ export function createApp(
 
     if (url.pathname === "/control/v1/gates" && req.method === "POST") return notifyDevices(await req.json());
 
+    const projectSessions = /^\/control\/v1\/projects\/([^/]+)\/sessions$/.exec(url.pathname);
+    if (projectSessions && req.method === "GET") {
+      const authError = validateControlBearer(req, config, "sessions:read");
+      if (authError) return authError;
+      const pid = projectSessions[1]!;
+      const sessions = [...registry.sessions.values()].filter(s => s.projectId === pid).map(s => registry.publicSession(s));
+      return json(envelope({ sessions, restoreSkipped: registry.restoreSkipped }));
+    }
+
     const start = /^\/control\/v1\/projects\/([^/]+)\/sessions$/.exec(url.pathname);
     if (start && req.method === "POST") return json(await registry.start(start[1]!));
 

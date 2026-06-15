@@ -2,7 +2,7 @@ import { defaultConfig, type SupervisorConfig } from "./config";
 import { Metrics, hashId, logJson, tokenHash, FIXED_TIME } from "./observability";
 import { healthResponse, readyResponse, metricsResponse, json, errorResponse, envelope } from "./health";
 import { listProjects } from "./projects";
-import { SessionRegistry } from "./sessions";
+import { SessionRegistry, SessionUnrecoverableError } from "./sessions";
 import { proxyRoute } from "./proxy";
 import { DeviceRegistry, type DeviceRegistrationRequest } from "./devices";
 import { detectGateNotification } from "./gates";
@@ -122,7 +122,14 @@ export function createApp(
     if (stop && req.method === "POST") { registry.stop(stop[1]!); return json({ ok: true }); }
 
     const respawn = /^\/control\/v1\/sessions\/([^/]+):respawn$/.exec(url.pathname);
-    if (respawn && req.method === "POST") return json(await registry.respawn(respawn[1]!));
+    if (respawn && req.method === "POST") {
+      try {
+        return json(await registry.respawn(respawn[1]!));
+      } catch (error) {
+        if (error instanceof SessionUnrecoverableError) return errorResponse("session_unrecoverable", "세션을 복구할 수 없습니다. 프로젝트에서 새 세션을 시작해 주세요.", false, {}, 409);
+        throw error;
+      }
+    }
 
     const routeMatch = /^\/s\/([^/]+)\/(.*)$/.exec(url.pathname);
     if (routeMatch) return proxyRoute(req, routeMatch[1]!, `/${routeMatch[2]!}`, registry, metrics);

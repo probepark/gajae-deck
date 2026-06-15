@@ -9,9 +9,15 @@ import { hashId, logJson, type Metrics } from "./observability";
 
 export type SessionStatus = "starting" | "ready" | "reconnecting" | "idle" | "degraded" | "stopped" | "error";
 export type RestoreSkipReason = "stale_ttl" | "max_restored_sessions" | "crash_loop_cap" | "project_missing" | "cwd_unavailable" | "config_changed" | "credential_unavailable" | "manual_stop" | "route_invalid";
+
+export class SessionUnrecoverableError extends Error {
+  constructor() {
+    super("session_unrecoverable");
+  }
+}
 export interface SessionRoute { sessionId: string; projectId: string; routeId: string; routePath: string; baseUrl: string; scopedToken: string; scopes: string[]; expiresAt: null | string; revocation: "respawn_required"; ownerToken: string }
 export interface Session { id: string; projectId: string; routeId: string; routeIdHash: string; gjcSessionId: string; status: SessionStatus; scopes: string[]; startedAt: string; lastActiveAt: string; lastSeq: number; bridgePid: number | null; restoreEligibility: "eligible" | "ineligible" | "skipped"; bridgeUrl: string; bridgeToken: string; routeToken: string; skipReason?: RestoreSkipReason; degradedReason?: string; idleSince?: string; proc?: Subprocess }
-export interface PersistedSessionMeta { id: string; projectId: string; projectHash: string; routeHash: string; routeId?: string; gjcSessionId: string; status: SessionStatus; scopes: string[]; startedAt: string; lastActiveAt: string; lastSeq: number; restoreEligibility: "eligible" | "ineligible"; crashRestarts?: string[]; policyHash?: string }
+export interface PersistedSessionMeta { id: string; projectId: string; projectHash: string; routeHash: string; routeId?: string; gjcSessionId: string; status: SessionStatus; scopes: string[]; startedAt: string; lastActiveAt: string; lastSeq: number; restoreEligibility: "eligible" | "ineligible"; crashRestarts?: string[]; policyHash?: string; cwdHash?: string }
 
 async function waitForBridge(bridgeUrl: string, token: string, proc: Subprocess, timeoutMs = 8000): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
@@ -64,14 +70,52 @@ export class SessionRegistry {
   listSessions() { return envelope({ sessions: [...this.sessions.values()].map(s => this.publicSession(s)), restoreSkipped: this.restoreSkipped }); }
 
   stop(sessionId: string) { const s = this.sessions.get(sessionId); if (!s) return false; s.proc?.kill(); s.status = "stopped"; revokeScopedToken(s.routeToken); this.routes.delete(s.routeId); this.runningByProject.delete(s.projectId); this.metrics.inc("session.stop"); logJson({ level: "info", event: "session.stop", projectHash: hashId(s.projectId, "hash_project"), sessionHash: hashId(s.id, "hash_session"), routeHash: s.routeIdHash }); return true; }
-  async respawn(sessionId: string) { const old = this.sessions.get(sessionId); if (!old) throw new Error("unknown session"); revokeScopedToken(old.routeToken); old.proc?.kill(); this.sessions.delete(sessionId); this.routes.delete(old.routeId); const spawnFresh = !!old.proc; const res = await this.start(old.projectId, { ...(spawnFresh ? { resume: "latest" } : { bridgeUrl: old.bridgeUrl, bridgeToken: old.bridgeToken }), routeId: "route_opaque_8b2c", scopedTokenAlias: "scoped_route_token_alias_8b2c" }); this.metrics.inc("session.respawn"); logJson({ level: "info", event: "session.respawn", projectHash: hashId(old.projectId, "hash_project"), sessionHash: hashId(old.id, "hash_session"), routeHash: old.routeIdHash }); return res; }
+  async respawn(sessionId: string) {
+    const old = this.sessions.get(sessionId);
+    if (!old) {
+      const meta = await this.readPersistedSession(sessionId);
+      const projectId = meta?.projectId;
+      const project = projectId ? this.config.projects.find(p => p.id === projectId) : undefined;
+      const cwdVerified = project !== undefined && (meta?.cwd === project.cwd || meta?.cwdHash === project.cwdHash);
+      if (!project || !cwdVerified) {
+        this.metrics.inc("session.respawn.fallback", project ? "cwd_unverified" : "metadata_missing");
+        throw new SessionUnrecoverableError();
+      }
+      const res = await this.start(project.id, { resume: "latest" });
+      this.metrics.inc("session.respawn.fallback", "success");
+      logJson({ level: "info", event: "session.respawn", projectHash: hashId(project.id, "hash_project"), sessionHash: hashId(sessionId, "hash_session"), routeHash: res.session.routeIdHash });
+      return res;
+    }
+    revokeScopedToken(old.routeToken);
+    old.proc?.kill();
+    this.sessions.delete(sessionId);
+    this.routes.delete(old.routeId);
+    const spawnFresh = old.proc !== undefined;
+    const res = await this.start(old.projectId, { ...(spawnFresh ? { resume: "latest" } : { bridgeUrl: old.bridgeUrl, bridgeToken: old.bridgeToken }), routeId: "route_opaque_8b2c", scopedTokenAlias: "scoped_route_token_alias_8b2c" });
+    this.metrics.inc("session.respawn");
+    logJson({ level: "info", event: "session.respawn", projectHash: hashId(old.projectId, "hash_project"), sessionHash: hashId(old.id, "hash_session"), routeHash: old.routeIdHash });
+    return res;
+  }
+
+  async readPersistedSession(sessionId: string): Promise<any | undefined> {
+    try {
+      return JSON.parse(await readFile(join(this.stateDir, `${sessionId}.json`), "utf8"));
+    } catch {
+      return undefined;
+    }
+  }
+
+  projectCwd(projectId: string): string | undefined {
+    return this.config.projects.find(p => p.id === projectId)?.cwd;
+  }
+
   route(routeId: string) { const id = this.routes.get(routeId); return id ? this.sessions.get(id) : undefined; }
   markIdle(sessionId: string, now = new Date().toISOString()) { const s = this.sessions.get(sessionId); if (!s) return false; const sessionHash = hashId(s.id, "hash_session"); const projectHash = hashId(s.projectId, "hash_project"); s.status = "idle"; s.idleSince = now; delete s.degradedReason; this.metrics.clearSessionState("degraded", sessionHash); this.metrics.setSessionState("idle", sessionHash, projectHash, 1); logJson({ level: "info", event: "session.idle", projectHash, sessionHash, routeHash: s.routeIdHash }); return true; }
   markDegraded(sessionId: string, code = "bridge_unhealthy") { const s = this.sessions.get(sessionId); if (!s) return false; const sessionHash = hashId(s.id, "hash_session"); const projectHash = hashId(s.projectId, "hash_project"); s.status = "degraded"; s.degradedReason = code; delete s.idleSince; this.metrics.clearSessionState("idle", sessionHash); this.metrics.setSessionState("degraded", sessionHash, projectHash, 1); logJson({ level: "warn", event: "session.degraded", projectHash, sessionHash, routeHash: s.routeIdHash, code }); return true; }
 
   async persistSession(session: Session) {
     await mkdir(this.stateDir, { recursive: true });
-    const meta: PersistedSessionMeta = { id: session.id, projectId: session.projectId, projectHash: hashId(session.projectId, "hash_project"), routeHash: session.routeIdHash, gjcSessionId: session.gjcSessionId, status: session.status, scopes: session.scopes, startedAt: session.startedAt, lastActiveAt: session.lastActiveAt, lastSeq: session.lastSeq, restoreEligibility: session.restoreEligibility === "skipped" ? "ineligible" : session.restoreEligibility };
+    const meta: PersistedSessionMeta = { id: session.id, projectId: session.projectId, projectHash: hashId(session.projectId, "hash_project"), routeHash: session.routeIdHash, gjcSessionId: session.gjcSessionId, status: session.status, scopes: session.scopes, startedAt: session.startedAt, lastActiveAt: session.lastActiveAt, lastSeq: session.lastSeq, restoreEligibility: session.restoreEligibility === "skipped" ? "ineligible" : session.restoreEligibility, ...(this.config.projects.find(p => p.id === session.projectId)?.cwdHash ? { cwdHash: this.config.projects.find(p => p.id === session.projectId)!.cwdHash } : {}) };
     await writeFile(join(this.stateDir, `${session.id}.json`), JSON.stringify(meta, null, 2));
   }
   async readPersistedSessions(): Promise<PersistedSessionMeta[]> {

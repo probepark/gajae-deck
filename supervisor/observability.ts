@@ -34,6 +34,8 @@ type CounterBag = {
   "session.start": number;
   "session.stop": number;
   "session.respawn": number;
+  "session.respawn.fallback": Record<string, number>;
+  "history.inject.skip": Record<string, number>;
   "gate.resolved": number;
 };
 
@@ -50,6 +52,8 @@ export class Metrics {
     "session.start": 0,
     "session.stop": 0,
     "session.respawn": 0,
+    "session.respawn.fallback": {},
+    "history.inject.skip": {},
     "gate.resolved": 0,
   };
   gauges = {
@@ -65,8 +69,10 @@ export class Metrics {
   inc(name: keyof CounterBag, label?: string): void {
     const current = this.counters[name];
     if (typeof current === "number") { (this.counters as Record<string, unknown>)[name] = current + 1; return; }
-    if (label && name === "restore.skipped") this.counters["restore.skipped"][label] = (this.counters["restore.skipped"][label] ?? 0) + 1;
-    if (label && name === "route.reject") this.counters["route.reject"][label] = (this.counters["route.reject"][label] ?? 0) + 1;
+    if (label && current && typeof current === "object") {
+      const bag = current as Record<string, number>;
+      bag[label] = (bag[label] ?? 0) + 1;
+    }
   }
   incPush(name: "push.sent" | "push.failed", provider: "apns" | "fcm"): void { this.counters[name][provider] += 1; }
   setProviderHealth(provider: "apns" | "fcm", healthy: boolean): void { this.gauges["provider.credential_health"][provider] = healthy ? 1 : 0; }

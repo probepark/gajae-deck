@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp } from "../server";
@@ -13,6 +13,7 @@ import { DeviceRegistry } from "../devices";
 import { FakePushProvider, sendWithRetry } from "../providers";
 import { defaultScopes, mintScopedToken, timingSafeTokenEqual, validateRouteClaim } from "../tokens";
 import { restoreWithinBudget } from "../boot";
+import { prependHistoryStream } from "../proxy";
 import { SessionRegistry } from "../sessions";
 
 const servers: ReturnType<typeof Bun.serve>[] = [];
@@ -560,3 +561,187 @@ describe("G009 in-process supervisor E2E", () => {
     expect(bridge.seen).toHaveLength(bridgeContactsBeforeRevoked);
   });
 });
+
+
+async function textBody(res: Response): Promise<string> {
+  return await res.text();
+}
+
+function parseSse(text: string): any[] {
+  return text.split("\n\n").filter(Boolean).map(block => {
+    const data = block.split("\n").filter(line => line.startsWith("data:")).map(line => line.slice(5).trimStart()).join("\n");
+    return JSON.parse(data);
+  });
+}
+
+async function writeHistoryFixture(root: string, cwd: string, rows: any[], file = "20260615_gjc_sess_7f3a.jsonl", metaCwd = cwd) {
+  const slug = cwd.replace(process.env.HOME ?? "", "").replace(/\//g, "-") || "-";
+  const dir = join(root, slug);
+  await mkdir(dir, { recursive: true });
+  const path = join(dir, file);
+  const lines = [{ type: "session", id: "gjc_sess_7f3a", cwd: metaCwd }, ...rows].map(row => JSON.stringify(row)).join("\n");
+  await writeFile(path, lines);
+  return path;
+}
+
+async function withHistoryEnv<T>(fn: (root: string) => Promise<T>): Promise<T> {
+  const old = process.env.GJC_AGENT_SESSIONS_DIR;
+  const root = await mkdtemp(join(tmpdir(), "gjc-history-"));
+  process.env.GJC_AGENT_SESSIONS_DIR = root;
+  try { return await fn(root); } finally {
+    if (old === undefined) delete process.env.GJC_AGENT_SESSIONS_DIR;
+    else process.env.GJC_AGENT_SESSIONS_DIR = old;
+  }
+}
+
+async function historyResponse(rows: any[], lastSeq?: string, bridgeHandler?: (req: Request) => Response | Promise<Response>) {
+  return await withHistoryEnv(async root => {
+    const app = createApp();
+    const cwd = app.config.projects[0]!.cwd;
+    await writeHistoryFixture(root, cwd, rows);
+    const bridge = fakeBridge(bridgeHandler ?? (() => new Response('data: {"seq":1,"type":"live"}\n\n', { headers: { "content-type": "text/event-stream" } })));
+    const start = await app.registry.start("proj_7f3a", { bridgeUrl: bridge.url, bridgeToken: "bridge_secret" });
+    const qs = lastSeq === undefined ? "" : `?last_seq=${encodeURIComponent(lastSeq)}`;
+    const res = await app.fetch(new Request(`http://x/s/${start.route.routeId}/v1/sessions/gjc_sess_7f3a/events${qs}`, { headers: { authorization: `Bearer ${start.route.scopedToken}` } }));
+    return { res, text: await textBody(res), app, bridge, start, cwd, root };
+  });
+}
+
+describe("history injection and supervisor respawn plan", () => {
+  test("AC1_history_extracts_user_assistant_latest_100_before_live", async () => {
+    const rows: any[] = [
+      ...Array.from({ length: 105 }, (_, i) => ({ type: "message", timestamp: `t${i}`, message: { role: i % 2 ? "assistant" : "user", content: `msg-${i}` } })),
+      { type: "message", message: { role: "user", content: [{ type: "thinking", text: "secret-thinking" }] } },
+      { type: "message", message: { role: "tool", content: "tool-output" } },
+    ];
+    const { text } = await historyResponse(rows, "0");
+    const frames = parseSse(text);
+    expect(frames).toHaveLength(101);
+    expect(frames[0].raw.text).toBe("msg-5");
+    expect(frames[99].raw.text).toBe("msg-104");
+    expect(frames[100].seq).toBe(1);
+    expect(text.includes("secret-thinking")).toBe(false);
+    expect(text.includes("tool-output")).toBe(false);
+  });
+
+  test("AC2_history_frame_marks_display_fields", async () => {
+    const { text } = await historyResponse([{ type: "message", timestamp: "ts1", message: { role: "user", content: "hello" } }]);
+    const frame = parseSse(text)[0];
+    expect(frame.type).toBe("history");
+    expect(frame.sessionId).toBe("gjc_sess_7f3a");
+    expect(frame.raw).toMatchObject({ type: "history", isHistory: true, role: "user", text: "hello", ts: "ts1", history_seq: 0, source: "gjc-jsonl" });
+  });
+
+  test("AC3_history_seq_absent_live_seq_applied_positive_history_forbidden", async () => {
+    const { text } = await historyResponse([{ type: "message", message: { role: "assistant", content: "past" } }]);
+    const frames = parseSse(text);
+    expect(Object.prototype.hasOwnProperty.call(frames[0], "seq")).toBe(false);
+    expect(frames[0].seq == null).toBe(true);
+    expect(frames[1].seq).toBe(1);
+  });
+
+  test("AC4_initial_last_seq_semantics_and_reconnect_skip", async () => {
+    const rows = [{ type: "message", message: { role: "user", content: "past" } }];
+    expect(parseSse((await historyResponse(rows)).text)[0].type).toBe("history");
+    expect(parseSse((await historyResponse(rows, "0")).text)[0].type).toBe("history");
+    expect(parseSse((await historyResponse(rows, "1")).text)[0].type).toBe("live");
+    expect(parseSse((await historyResponse(rows, "-1")).text)[0].type).toBe("live");
+    expect(parseSse((await historyResponse(rows, "abc")).text)[0].type).toBe("live");
+    await withHistoryEnv(async root => {
+      const app = createApp();
+      const cwd = app.config.projects[0]!.cwd;
+      await writeHistoryFixture(root, `${cwd}-other`, rows);
+      const bridge = fakeBridge(() => new Response('data: {"seq":1,"type":"live"}\n\n', { headers: { "content-type": "text/event-stream" } }));
+      const start = await app.registry.start("proj_7f3a", { bridgeUrl: bridge.url });
+      const res = await app.fetch(new Request(`http://x/s/${start.route.routeId}/v1/sessions/gjc_sess_7f3a/events`, { headers: { authorization: `Bearer ${start.route.scopedToken}` } }));
+      expect(parseSse(await res.text())[0].type).toBe("live");
+    });
+  });
+
+  test("AC4b_same_slug_jsonl_with_mismatched_cwd_is_live_only", async () => {
+    const res = await withHistoryEnv(async root => {
+      const app = createApp();
+      const cwd = app.config.projects[0]!.cwd;
+      // File lives in the project's OWN slug dir, but its session metadata cwd does NOT match.
+      // slug-only-newest selection (without exact cwd verification) would wrongly inject this.
+      await writeHistoryFixture(root, cwd, [{ type: "message", message: { role: "user", content: "leaked-from-wrong-cwd" } }], "20260615_wrong_cwd.jsonl", `${cwd}/sub/other-project`);
+      const bridge = fakeBridge(() => new Response('data: {"seq":1,"type":"live"}\n\n', { headers: { "content-type": "text/event-stream" } }));
+      const start = await app.registry.start("proj_7f3a", { bridgeUrl: bridge.url, bridgeToken: "bridge_secret" });
+      return await app.fetch(new Request(`http://x/s/${start.route.routeId}/v1/sessions/gjc_sess_7f3a/events?last_seq=0`, { headers: { authorization: `Bearer ${start.route.scopedToken}` } }));
+    });
+    const raw = await textBody(res);
+    const frames = parseSse(raw);
+    expect(frames.some(f => f.type === "history")).toBe(false);
+    expect(frames[0]?.type).toBe("live");
+    expect(raw.includes("leaked-from-wrong-cwd")).toBe(false);
+  });
+
+  test("AC5_unknown_respawn_metadata_success_and_korean_error_negative_paths", async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), "respawn-state-"));
+    const app = createApp();
+    app.registry.stateDir = stateDir;
+    const cwd = app.config.projects[0]!.cwd;
+    await writeFile(join(stateDir, "sess_missing.json"), JSON.stringify({ id: "sess_missing", projectId: "proj_7f3a", cwd, cwdHash: app.config.projects[0]!.cwdHash }));
+    const ok = await app.fetch(new Request("http://x/control/v1/sessions/sess_missing:respawn", { method: "POST" }));
+    expect(ok.status).toBe(200);
+    const okBody = await body(ok);
+    expect(okBody.route.routeId).toStartWith("route_");
+    const none = await app.fetch(new Request("http://x/control/v1/sessions/sess_none:respawn", { method: "POST" }));
+    expect(none.status).toBe(409);
+    expect((await body(none)).error).toMatchObject({ code: "session_unrecoverable", message: "세션을 복구할 수 없습니다. 프로젝트에서 새 세션을 시작해 주세요.", retryable: false, details: {} });
+    await writeFile(join(stateDir, "sess_bad.json"), JSON.stringify({ id: "sess_bad", projectId: "proj_7f3a", cwd: "/tmp/not-this-project" }));
+    const bad = await app.fetch(new Request("http://x/control/v1/sessions/sess_bad:respawn", { method: "POST" }));
+    expect(bad.status).toBe(409);
+    const badText = await bad.text();
+    expect(badText.includes(cwd)).toBe(false);
+    expect(badText.includes("route_opaque")).toBe(false);
+    // production persisted shape: cwdHash only (no raw cwd) must verify against config.cwdHash
+    await writeFile(join(stateDir, "sess_prod.json"), JSON.stringify({ id: "sess_prod", projectId: "proj_7f3a", cwdHash: app.config.projects[0]!.cwdHash }));
+    const prod = await app.fetch(new Request("http://x/control/v1/sessions/sess_prod:respawn", { method: "POST" }));
+    expect(prod.status).toBe(200);
+    // production persisted shape with mismatched cwdHash must fail closed
+    await writeFile(join(stateDir, "sess_prodbad.json"), JSON.stringify({ id: "sess_prodbad", projectId: "proj_7f3a", cwdHash: "hash_cwd_other" }));
+    const prodbad = await app.fetch(new Request("http://x/control/v1/sessions/sess_prodbad:respawn", { method: "POST" }));
+    expect(prodbad.status).toBe(409);
+  });
+
+  test("AC6_recreated_route_prompts_new_continue_bridge_and_fixture_compat", async () => {
+    const bridge = fakeBridge();
+    const app = createApp();
+    const start = await app.registry.start("proj_7f3a", { bridgeUrl: bridge.url });
+    const oldRoute = start.route.routeId;
+    const respawn = await app.registry.respawn(start.session.id);
+    expect(respawn.route.routeId).not.toBe(oldRoute);
+    const prompt = await app.fetch(new Request(`http://x/s/${respawn.route.routeId}/v1/sessions/gjc_sess_7f3a/commands`, { method: "POST", headers: { authorization: `Bearer ${respawn.route.scopedToken}` }, body: "{}" }));
+    expect(prompt.status).toBe(200);
+    expect(bridge.seen.at(-1)?.headers.get("authorization")?.startsWith("Bearer bridge_")).toBe(true);
+  });
+
+  test("redaction_negative_corpus_for_history_and_respawn", async () => {
+    const secretText = "transcript-secret-redaction";
+    const { text, cwd, root, start } = await historyResponse([{ type: "message", message: { role: "user", content: secretText } }]);
+    const artifact = JSON.stringify(metricsResponse(new Metrics())) + text;
+    expect(text.includes(secretText)).toBe(true);
+    expect(JSON.stringify(metricsResponse(new Metrics())).includes(secretText)).toBe(false);
+    for (const secret of [cwd, root, start.route.routeId, start.route.scopedToken, "bridge_secret"]) expect(artifact.includes(secret)).toBe(false);
+  });
+
+  test("stream_wrapper_headers_and_cancel", async () => {
+    let cancelled = false;
+    const upstream = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new TextEncoder().encode('data: {"seq":1,"type":"live"}\n\n')); },
+      cancel() { cancelled = true; },
+    });
+    const wrapped = prependHistoryStream([{ type: "history", raw: { isHistory: true } }], upstream);
+    const reader = wrapped.getReader();
+    const first = await reader.read();
+    expect(new TextDecoder().decode(first.value)).toContain('"history"');
+    await reader.cancel("stop");
+    expect(cancelled).toBe(true);
+
+    const { res } = await historyResponse([{ type: "message", message: { role: "user", content: "past" } }], "0", () => new Response('data: {"seq":1,"type":"live"}\n\n', { headers: { "content-type": "text/event-stream", "content-length": "10", "transfer-encoding": "chunked", "content-encoding": "gzip", etag: "strong" } }));
+    expect(res.headers.get("content-length")).toBeNull();
+    expect(res.headers.get("transfer-encoding")).toBeNull();
+    expect(res.headers.get("content-encoding")).toBeNull();
+    expect(res.headers.get("etag")).toBeNull();
+  });});

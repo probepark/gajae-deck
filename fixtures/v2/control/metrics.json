@@ -26,6 +26,8 @@
     "session.start": 3,
     "session.stop": 1,
     "session.respawn": 1,
+    "session.respawn.fallback": {},
+    "history.inject.skip": {},
     "gate.resolved": 5
   },
   "gauges": {

@@ -11,8 +11,7 @@ type RouteEndpoint = { method: string; pattern: RegExp; requiredScope: RouteScop
 type HistoryMessage = { role: "user" | "assistant"; text: string; ts?: string };
 
 const ROUTE_ENDPOINTS: readonly RouteEndpoint[] = [
-  { method: "GET", pattern: /^\/healthz$/, requiredScope: "events" },
-  { method: "GET", pattern: /^\/v1\/help$/, requiredScope: "events" },
+  // /healthz and /v1/help are public on the bridge (protocol v2: auth "no"); handled without a route token below.
   { method: "GET", pattern: /^\/v1\/handshake$/, requiredScope: "events" },
   { method: "GET", pattern: /^\/v1\/sessions\/[^/]+\/events$/, requiredScope: "events" },
   { method: "POST", pattern: /^\/v1\/sessions\/[^/]+\/commands$/, requiredScope: "prompt" },
@@ -33,6 +32,14 @@ const ROUTE_ENDPOINTS: readonly RouteEndpoint[] = [
 
 function requiredScopeFor(method: string, pathname: string): RouteScope | undefined {
   return ROUTE_ENDPOINTS.find(endpoint => endpoint.method === method && endpoint.pattern.test(pathname))?.requiredScope;
+}
+
+const PUBLIC_ROUTE_ENDPOINTS: readonly { method: string; pattern: RegExp }[] = [
+  { method: "GET", pattern: /^\/healthz$/ },
+  { method: "GET", pattern: /^\/v1\/help$/ },
+];
+function isPublicRouteEndpoint(method: string, pathname: string): boolean {
+  return PUBLIC_ROUTE_ENDPOINTS.some(e => e.method === method && e.pattern.test(pathname));
 }
 
 function routeDenied(routeId: string, status = 403): Response {
@@ -174,21 +181,27 @@ function strippedHeaders(headers: Headers): Headers {
 
 export async function proxyRoute(req: Request, routeId: string, rest: string, registry: SessionRegistry, metrics: Metrics): Promise<Response> {
   const pathname = rest.startsWith("/") ? rest : `/${rest}`;
-  const requiredScope = requiredScopeFor(req.method, pathname);
-  if (!requiredScope) {
-    metrics.inc("route.reject", "scope_denied");
-    return routeDenied(routeId);
-  }
-  const token = extractBearer(req.headers.get("authorization"));
-  const validation = validateRouteClaim(token, routeId, requiredScope);
-  if (!validation.ok) {
-    metrics.inc("route.reject", validation.code);
-    if (validation.code === "route_token_mismatch") return errorResponse("route_token_mismatch", "Route token is not bound to the requested route.", false, validation.details, 403);
-    return errorResponse(validation.code, validation.code === "scope_denied" ? "Route token does not allow this scope." : "Missing or invalid route token.", false, {}, validation.code === "unauthorized" ? 401 : 403);
-  }
-  const session = registry.route(routeId);
-  if (!session || session.id !== validation.claim.sessionId || session.projectId !== validation.claim.projectId) {
-    return errorResponse("route_token_mismatch", "Route token is not bound to an active session route.", false, { routeIdHash: hashId(routeId, "hash_route"), bridgeContacted: false }, 403);
+  let session;
+  if (isPublicRouteEndpoint(req.method, pathname)) {
+    session = registry.route(routeId);
+    if (!session) return errorResponse("route_token_mismatch", "Route is not bound to an active session route.", false, { routeIdHash: hashId(routeId, "hash_route"), bridgeContacted: false }, 404);
+  } else {
+    const requiredScope = requiredScopeFor(req.method, pathname);
+    if (!requiredScope) {
+      metrics.inc("route.reject", "scope_denied");
+      return routeDenied(routeId);
+    }
+    const token = extractBearer(req.headers.get("authorization"));
+    const validation = validateRouteClaim(token, routeId, requiredScope);
+    if (!validation.ok) {
+      metrics.inc("route.reject", validation.code);
+      if (validation.code === "route_token_mismatch") return errorResponse("route_token_mismatch", "Route token is not bound to the requested route.", false, validation.details, 403);
+      return errorResponse(validation.code, validation.code === "scope_denied" ? "Route token does not allow this scope." : "Missing or invalid route token.", false, {}, validation.code === "unauthorized" ? 401 : 403);
+    }
+    session = registry.route(routeId);
+    if (!session || session.id !== validation.claim.sessionId || session.projectId !== validation.claim.projectId) {
+      return errorResponse("route_token_mismatch", "Route token is not bound to an active session route.", false, { routeIdHash: hashId(routeId, "hash_route"), bridgeContacted: false }, 403);
+    }
   }
 
   const upstream = new URL(session.bridgeUrl);

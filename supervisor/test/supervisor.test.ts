@@ -744,4 +744,22 @@ describe("history injection and supervisor respawn plan", () => {
     expect(res.headers.get("transfer-encoding")).toBeNull();
     expect(res.headers.get("content-encoding")).toBeNull();
     expect(res.headers.get("etag")).toBeNull();
-  });});
+  });
+
+  test("route_healthz_is_public_and_forwards_without_route_token", async () => {
+    const app = createApp();
+    let healthzAuth: string | null = "UNSET";
+    const bridge = fakeBridge((req) => {
+      if (new URL(req.url).pathname === "/healthz") { healthzAuth = req.headers.get("authorization"); return Response.json({ status: "ok" }); }
+      return new Response("nf", { status: 404 });
+    });
+    const start = await app.registry.start("proj_7f3a", { bridgeUrl: bridge.url, bridgeToken: "bridge_secret" });
+    const res = await app.fetch(new Request(`http://x/s/${start.route.routeId}/healthz`));
+    expect(res.status).toBe(200);
+    expect((await res.json() as any).status).toBe("ok");
+    expect(healthzAuth).toBe("Bearer bridge_secret");
+    // events still requires a valid route token (public list does not weaken authed endpoints)
+    const ev = await app.fetch(new Request(`http://x/s/${start.route.routeId}/v1/sessions/gjc_sess_7f3a/events?last_seq=1`));
+    expect(ev.status).toBe(401);
+  });
+});

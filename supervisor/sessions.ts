@@ -32,6 +32,28 @@ async function waitForBridge(bridgeUrl: string, token: string, proc: Subprocess,
   return false;
 }
 
+async function discoverBridgeSessionId(bridgeUrl: string, token: string, requestedScopes: string[]): Promise<string | undefined> {
+  try {
+    const res = await fetch(`${bridgeUrl}/v1/handshake`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        protocol_version_range: { min: 1, max: 2 },
+        capabilities: ["events", "prompt", "permission", "workflow_gate"],
+        requested_scopes: requestedScopes,
+        last_seq: 0,
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return undefined;
+    const body = (await res.json()) as { status?: string; session_id?: string };
+    if (body?.status === "accepted" && typeof body.session_id === "string" && body.session_id) return body.session_id;
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export class SessionRegistry {
   sessions = new Map<string, Session>();
   routes = new Map<string, string>();
@@ -47,6 +69,7 @@ export class SessionRegistry {
     const bridgeToken = opts.bridgeToken ?? `bridge_${randomUUID()}`;
     let bridgeUrl = opts.bridgeUrl;
     let proc: Subprocess | undefined; let pid = 4242;
+    let gjcSessionId = "gjc_sess_7f3a";
     if (!bridgeUrl) {
       const port = 35_000 + Math.floor(Math.random() * 10_000);
       const scheme = this.config.bridgeTls ? "https" : "http";
@@ -55,10 +78,12 @@ export class SessionRegistry {
       proc = spawn({ cmd: [...this.config.bridgeCommand, ...resumeArgs], cwd: project.cwd, env: { ...Bun.env, GJC_BRIDGE_TOKEN: bridgeToken, GJC_BRIDGE_HOST: this.config.bridgeHost, GJC_BRIDGE_PORT: String(port), GJC_BRIDGE_ENDPOINTS: "all", GJC_BRIDGE_SCOPES: this.config.bridgeScopes.join(","), ...(this.config.bridgeTls ? { GJC_BRIDGE_TLS_CERT: this.config.bridgeTls.cert, GJC_BRIDGE_TLS_KEY: this.config.bridgeTls.key } : {}) }, stdout: "ignore", stderr: "ignore" });
       pid = proc.pid ?? 0;
       await waitForBridge(bridgeUrl, bridgeToken, proc);
+      const discovered = await discoverBridgeSessionId(bridgeUrl, bridgeToken, this.config.bridgeScopes);
+      if (discovered) gjcSessionId = discovered;
     }
     const claim: Omit<RouteClaim, "tokenHash"> = { routeId, sessionId: id, projectId, scopes: defaultScopes(), issuedAt: new Date().toISOString() };
     const routeToken = mintScopedToken(claim, opts.scopedTokenAlias ?? (projectId === "proj_7f3a" ? "scoped_route_token_alias_7f3a" : undefined));
-    const session: Session = { id, projectId, routeId, routeIdHash: hashId(routeId, "hash_route"), gjcSessionId: "gjc_sess_7f3a", status: "ready", scopes: defaultScopes(), startedAt: routeId === "route_opaque_8b2c" ? "2026-06-14T16:21:30Z" : "2026-06-14T15:59:00Z", lastActiveAt: routeId === "route_opaque_8b2c" ? "2026-06-14T16:21:30Z" : "2026-06-14T16:18:30Z", lastSeq: routeId === "route_opaque_8b2c" ? 0 : 42, bridgePid: pid, restoreEligibility: "eligible", bridgeUrl, bridgeToken, routeToken, ...(proc ? { proc } : {}) };
+    const session: Session = { id, projectId, routeId, routeIdHash: hashId(routeId, "hash_route"), gjcSessionId, status: "ready", scopes: defaultScopes(), startedAt: routeId === "route_opaque_8b2c" ? "2026-06-14T16:21:30Z" : "2026-06-14T15:59:00Z", lastActiveAt: routeId === "route_opaque_8b2c" ? "2026-06-14T16:21:30Z" : "2026-06-14T16:18:30Z", lastSeq: routeId === "route_opaque_8b2c" ? 0 : 42, bridgePid: pid, restoreEligibility: "eligible", bridgeUrl, bridgeToken, routeToken, ...(proc ? { proc } : {}) };
     this.sessions.set(id, session); this.routes.set(routeId, id); this.runningByProject.set(projectId, id); this.metrics.inc(opts.restored ? "restore.success" : "session.start"); this.metrics.gauges["bridge.ready"] = this.counts().ready;
     logJson({ level: "info", event: opts.restored ? "restore.success" : "session.start", projectHash: hashId(projectId, "hash_project"), sessionHash: hashId(id, "hash_session"), routeHash: session.routeIdHash });
     await this.persistSession(session);

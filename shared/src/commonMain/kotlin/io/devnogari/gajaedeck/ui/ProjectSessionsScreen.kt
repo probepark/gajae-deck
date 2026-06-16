@@ -10,7 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,15 +52,15 @@ fun ProjectSessionsScreen(
                         onFailure = { error = it.message ?: "Failed to start session" },
                     )
                 }
-            }) { Text("Start session") }
-            Button(onClick = {
+            }, shape = MaterialTheme.shapes.small) { Text("Start session") }
+            FilledTonalButton(onClick = {
                 scope.launch {
                     controlPlaneClient.startSession(projectId, resume = "new", scopes = emptyList()).fold(
                         onSuccess = onSessionStarted,
                         onFailure = { error = it.message ?: "Failed to start new conversation" },
                     )
                 }
-            }) { Text("New conversation") }
+            }, shape = MaterialTheme.shapes.small) { Text("New conversation") }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         when (val result = sessions) {
@@ -80,7 +81,7 @@ fun ProjectSessionsScreen(
 
 @Composable
 private fun SessionRow(session: Session, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    OutlinedCard(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
                 Text(session.id, style = MaterialTheme.typography.titleMedium)

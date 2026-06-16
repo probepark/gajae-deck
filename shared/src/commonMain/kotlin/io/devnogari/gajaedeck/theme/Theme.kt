@@ -25,6 +25,7 @@ fun GajaeDeckTheme(
     MaterialTheme(
         colorScheme = if (themeMode.isDark()) GajaeDeckDarkColors else GajaeDeckLightColors,
         typography = gajaeDeckTypography(),
+        shapes = GajaeDeckShapes,
         content = content,
     )
 }

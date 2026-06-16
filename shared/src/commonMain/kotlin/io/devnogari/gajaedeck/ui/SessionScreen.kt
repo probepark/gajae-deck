@@ -13,8 +13,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -33,6 +38,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.devnogari.gajaedeck.bridge.TranscriptItem
+import io.devnogari.gajaedeck.bridge.ConnectionState
 import io.devnogari.gajaedeck.bridge.MessageItem
 import io.devnogari.gajaedeck.bridge.ToolCallItem
 import io.devnogari.gajaedeck.bridge.GateItem
@@ -63,7 +69,9 @@ fun SessionScreen(controller: SessionController, onBack: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             TextButton(onClick = onBack) { Text(stringResource(Res.string.nav_pairings)) }
             Spacer(Modifier.width(8.dp))
-            Text("${stringResource(Res.string.session_title)} — ${state.connection}", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.session_title), style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.weight(1f))
+            ConnectionStatus(state.connection)
         }
         state.error?.let { Text("${stringResource(Res.string.error_label)}: $it", color = MaterialTheme.colorScheme.error) }
 
@@ -90,7 +98,7 @@ fun SessionScreen(controller: SessionController, onBack: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(prompt, { prompt = it }, label = { Text(stringResource(Res.string.prompt_label)) }, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
-            Button(onClick = { controller.sendPrompt(prompt); prompt = "" }) { Text(stringResource(Res.string.send)) }
+            Button(onClick = { controller.sendPrompt(prompt); prompt = "" }, shape = MaterialTheme.shapes.small) { Text(stringResource(Res.string.send)) }
         }
 
         CommandPalette(state) { type, params -> controller.sendCommand(type, params) }
@@ -104,11 +112,11 @@ fun SessionScreen(controller: SessionController, onBack: () -> Unit) {
 
 @Composable
 private fun TranscriptCard(item: TranscriptItem) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(8.dp)) {
             when (item) {
                 is MessageItem -> {
-                    Text(item.role, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                    Text(item.role.replaceFirstChar { it.uppercase() }, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                     Text(item.text, style = MaterialTheme.typography.bodySmall)
                 }
                 is ToolCallItem -> {
@@ -120,11 +128,29 @@ private fun TranscriptCard(item: TranscriptItem) {
                     Text(item.preview, style = MaterialTheme.typography.bodySmall)
                 }
                 is NoticeItem -> {
-                    Text(item.kind, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
-                    Text(item.raw, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+                    Text("System · ${item.kind}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ConnectionStatus(state: ConnectionState) {
+    val (label, color) = when (state) {
+        ConnectionState.CONNECTED_STREAMING -> "Connected" to MaterialTheme.colorScheme.primary
+        ConnectionState.CHECKING_HEALTH -> "Connecting" to MaterialTheme.colorScheme.secondary
+        ConnectionState.REPLAYING -> "Syncing" to MaterialTheme.colorScheme.secondary
+        ConnectionState.BACKOFF_RECONNECTING -> "Reconnecting" to MaterialTheme.colorScheme.secondary
+        ConnectionState.PAIRING -> "Pairing" to MaterialTheme.colorScheme.secondary
+        ConnectionState.DISCONNECTED_BY_USER -> "Disconnected" to MaterialTheme.colorScheme.secondary
+        ConnectionState.DESYNCED -> "Out of sync" to MaterialTheme.colorScheme.error
+        ConnectionState.AUTH_BLOCKED, ConnectionState.TLS_BLOCKED, ConnectionState.CORS_BLOCKED,
+        ConnectionState.PROTOCOL_BLOCKED, ConnectionState.ENDPOINT_DISABLED -> "Blocked" to MaterialTheme.colorScheme.error
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.size(8.dp).background(color, CircleShape))
+        Text(label, color = color, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -135,12 +161,13 @@ private fun CommandPalette(state: SessionUiState, onSend: (String, JsonObject) -
     val fieldValues = remember { mutableStateMapOf<String, String>() }
     Text(stringResource(Res.string.command_palette), style = MaterialTheme.typography.titleSmall)
     CommandRegistry.exposed.groupBy { it.group }.forEach { (group, cmds) ->
-        Text(group.name, style = MaterialTheme.typography.labelSmall)
+        Text(group.name.uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             cmds.forEach { meta ->
                 val enabled = CommandRegistry.isEnabled(meta.type, state.grantedScopes)
-                Button(
+                FilledTonalButton(
                     enabled = enabled,
+                    shape = MaterialTheme.shapes.small,
                     onClick = {
                         if (meta.fields.isEmpty()) {
                             onSend(meta.type, JsonObject(emptyMap()))
@@ -156,7 +183,7 @@ private fun CommandPalette(state: SessionUiState, onSend: (String, JsonObject) -
     selected?.let { meta ->
         val requiredFilled = meta.fields.filter { it.required }.all { (fieldValues[it.name] ?: "").isNotBlank() }
         val canSend = CommandRegistry.isEnabled(meta.type, state.grantedScopes) && requiredFilled
-        Card(modifier = Modifier.fillMaxWidth()) {
+        OutlinedCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(meta.type, fontWeight = FontWeight.Bold)
                 meta.fields.forEach { f ->
@@ -180,6 +207,7 @@ private fun CommandPalette(state: SessionUiState, onSend: (String, JsonObject) -
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         enabled = canSend,
+                        shape = MaterialTheme.shapes.small,
                         onClick = {
                             onSend(meta.type, CommandRegistry.buildParams(meta, fieldValues.toMap()))
                             selected = null

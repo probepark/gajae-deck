@@ -1,5 +1,6 @@
 package io.devnogari.gajaedeck.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,8 +9,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -33,7 +36,7 @@ fun ActionRequestPanel(
     onAction: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    OutlinedCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = request.summary,
@@ -64,17 +67,26 @@ fun ActionRequestPanel(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     request.actions.forEachIndexed { index, action ->
                         if (index > 0) Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = { onAction(action.id) },
-                            enabled = ActionRequestPanelLogic.actionsEnabled(request) &&
-                                (action.id != "submit" || ActionRequestPanelLogic.canSubmit(request, fieldValues)),
-                            colors = if (action.style == GateActionStyle.DESTRUCTIVE) {
-                                ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                            } else {
-                                ButtonDefaults.buttonColors()
-                            },
-                        ) {
-                            Text(text = action.label)
+                        val actionEnabled = ActionRequestPanelLogic.actionsEnabled(request) &&
+                            (action.id != "submit" || ActionRequestPanelLogic.canSubmit(request, fieldValues))
+                        when (action.style) {
+                            GateActionStyle.DESTRUCTIVE -> OutlinedButton(
+                                onClick = { onAction(action.id) },
+                                enabled = actionEnabled,
+                                shape = MaterialTheme.shapes.small,
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                            ) { Text(text = action.label) }
+                            GateActionStyle.PRIMARY -> Button(
+                                onClick = { onAction(action.id) },
+                                enabled = actionEnabled,
+                                shape = MaterialTheme.shapes.small,
+                            ) { Text(text = action.label) }
+                            GateActionStyle.NEUTRAL -> FilledTonalButton(
+                                onClick = { onAction(action.id) },
+                                enabled = actionEnabled,
+                                shape = MaterialTheme.shapes.small,
+                            ) { Text(text = action.label) }
                         }
                     }
                 }

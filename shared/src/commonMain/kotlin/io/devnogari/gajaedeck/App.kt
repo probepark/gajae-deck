@@ -5,6 +5,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import io.devnogari.gajaedeck.auth.StoredControlPlane
@@ -20,11 +22,12 @@ import org.koin.compose.koinInject
 fun App(storageLowerAssurance: Boolean = false) {
     val controlPlaneRepository: ControlPlaneRepository = koinInject()
     val appSettings: AppSettings = koinInject()
+    val themeMode by appSettings.themeMode.collectAsState()
     val stored = produceState<StoredControlPlane?>(initialValue = null, controlPlaneRepository) {
         value = controlPlaneRepository.list().firstOrNull()
     }.value
 
-    GajaeDeckTheme {
+    GajaeDeckTheme(themeMode = themeMode) {
         Surface(Modifier.fillMaxSize()) {
             val controlPlane = stored
             if (controlPlane == null) {

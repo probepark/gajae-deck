@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import io.devnogari.gajaedeck.resources.Res
 import io.devnogari.gajaedeck.resources.notosanskr
 import org.jetbrains.compose.resources.Font
@@ -33,14 +34,14 @@ fun gajaeDeckTypography(): Typography {
         headlineLarge = base.headlineLarge.copy(fontFamily = family),
         headlineMedium = base.headlineMedium.copy(fontFamily = family),
         headlineSmall = base.headlineSmall.copy(fontFamily = family),
-        titleLarge = base.titleLarge.copy(fontFamily = family),
-        titleMedium = base.titleMedium.copy(fontFamily = family),
+        titleLarge = base.titleLarge.copy(fontFamily = family, fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp),
+        titleMedium = base.titleMedium.copy(fontFamily = family, fontWeight = FontWeight.SemiBold),
         titleSmall = base.titleSmall.copy(fontFamily = family),
         bodyLarge = base.bodyLarge.copy(fontFamily = family),
         bodyMedium = base.bodyMedium.copy(fontFamily = family),
         bodySmall = base.bodySmall.copy(fontFamily = family),
         labelLarge = base.labelLarge.copy(fontFamily = family),
         labelMedium = base.labelMedium.copy(fontFamily = family),
-        labelSmall = base.labelSmall.copy(fontFamily = family),
+        labelSmall = base.labelSmall.copy(fontFamily = family, fontWeight = FontWeight.Medium, letterSpacing = 0.8.sp),
     )
 }

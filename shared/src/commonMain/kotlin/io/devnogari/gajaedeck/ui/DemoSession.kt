@@ -1,6 +1,10 @@
 package io.devnogari.gajaedeck.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -64,9 +68,11 @@ fun demoSessionController(scope: CoroutineScope): SessionController =
 @Composable
 fun DemoApp() {
     GajaeDeckTheme {
-        val scope = rememberCoroutineScope()
-        val controller = remember { demoSessionController(scope) }
-        LaunchedEffect(controller) { controller.connect() }
-        SessionScreen(controller = controller, onBack = {})
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            val scope = rememberCoroutineScope()
+            val controller = remember { demoSessionController(scope) }
+            LaunchedEffect(controller) { controller.connect() }
+            SessionScreen(controller = controller, onBack = {})
+        }
     }
 }

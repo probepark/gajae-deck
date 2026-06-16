@@ -49,3 +49,46 @@ Caddy static origin
 5. `POST /control/v1/devices` registers protected device metadata under `devices:write`.
 6. Route-token mismatch returns fail-closed without contacting the bridge.
 7. Respawn revokes the old route/token and old-route access fails without bridge contact.
+
+## Control-first 리모컨 UI/UX + issues 3·4 (Phases 0-6)
+
+Control-first Korean remote-control UI evidence for the negotiated `?demo=1` web session and issues 3·4 gate/palette work.
+
+### Screenshots
+
+- `docs/e2e/g007-web-ko-session-demo.png` — semantic transcript plus actionable `ActionRequestPanel` for `Permission: bash` with Allow/Deny/Always controls and grouped command palette; Korean renders without tofu.
+- `docs/e2e/g007-web-ko-palette-full.png` — full grouped command palette with `PROMPT`, `SESSION`, `MESSAGE_READ`, and `MODEL` groups visible.
+- `docs/e2e/g007-web-ko-gate-resolved.png` — after clicking Allow, the gate panel is resolved/removed and `CONTROL` + `EXPORT` palette groups are visible.
+
+### Web demo lane
+
+```sh
+./gradlew :shared:wasmJsBrowserDistribution
+serve shared/build/dist/wasmJs/productionExecutable
+open 'http://localhost:4099/?demo=1'
+```
+
+The `?demo=1` flag renders `DemoApp` with a negotiated `FakeBridge` demo session.
+
+### Verification
+
+- Kotlin desktop tests: `./gradlew :shared:desktopTest` — 195 tests, 0 failures.
+- Kotlin target compilation: `./gradlew :shared:compileKotlinDesktop :shared:compileKotlinIosSimulatorArm64 :androidApp:compileAndroidMain :shared:compileKotlinWasmJs` — 4 targets compile (`compileKotlinDesktop`, `compileKotlinIosSimulatorArm64`, `compileAndroidMain`, `compileKotlinWasmJs`).
+- Supervisor checks: `bun test` — 40 pass; `tsc --noEmit` clean (`tsc --noEmit clean`).
+- Desktop live-bridge E2E is env-gated and requires a live gjc bridge:
+
+```sh
+GJC_BRIDGE_E2E=1 GJC_BRIDGE_TOKEN=... GJC_BRIDGE_BASE=... ./gradlew :shared:desktopTest --tests '*LiveBridgeE2eTest'
+```
+
+### Delivered phases and deferred scope
+
+- P0: `readLine` + single `ResumeCursor` + `GateVocabulary` fail-closed + reconnect-storm handling.
+- P1: bounded `TranscriptState` ring + semantic reducer + `PendingGateIndex`.
+- P2: sealed gate adapters + `ActionRequestPanel` with redaction-by-construction.
+- P3: five gate response paths: correlation match, Outbox exclusive, in-flight exact-once, fail-closed actuator, and session-scoped always-allow.
+- P4: `CommandRegistry` 37 total / 12 exposed commands, grouped scope-gated palette, and schema form.
+- P5: app + supervisor canonical capability/scope alignment and negotiation fixtures.
+- P6: evidence docs record the control-first UI/UX screenshots, verification lanes, and deferred items.
+- Deferred/non-goals: real-device iOS/Android E2E, native TLS pinning/cert-rotation, 25 non-exposed command dedicated forms, upstream PR merge, and per-story QA artifact.
+

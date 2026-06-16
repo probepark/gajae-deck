@@ -1,5 +1,6 @@
 package io.devnogari.gajaedeck.bridge
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.JsonObject
@@ -17,10 +18,16 @@ class FakeBridgeTransport(
     private val handshakeResult: BridgeHandshakeResult = defaultHandshake(),
     private val frames: List<BridgeFrame> = emptyList(),
     private val healthy: Boolean = true,
+    private val responseFailure: BridgeException? = null,
+    val responseGate: CompletableDeferred<Unit>? = null,
 ) : BridgeTransport {
+    var lastHandshakeRequest: BridgeHandshakeRequest? = null
+    val postedUiResponses = mutableListOf<Pair<String, JsonObject>>()
+    val postedHostUriResults = mutableListOf<Pair<String, JsonObject>>()
 
     private val idempotencyCache = mutableMapOf<String, CommandResponse>()
     val sentCommands = mutableListOf<Pair<String, String>>() // type to idempotencyKey
+    val requestedLastSeqs = mutableListOf<Long>()
 
     override suspend fun health(): Boolean = healthy
 
@@ -28,9 +35,13 @@ class FakeBridgeTransport(
         put("status", if (helpEndpointsEnabled) "experimental_gated" else "fail_closed")
     }
 
-    override suspend fun handshake(request: BridgeHandshakeRequest): BridgeHandshakeResult = handshakeResult
+    override suspend fun handshake(request: BridgeHandshakeRequest): BridgeHandshakeResult {
+        lastHandshakeRequest = request
+        return handshakeResult
+    }
 
     override fun events(lastSeq: Long): Flow<BridgeFrame> = flow {
+        requestedLastSeqs.add(lastSeq)
         for (f in frames) {
             if ((f.seq ?: Long.MAX_VALUE) > lastSeq || f.type == BridgeFrameType.RESET) emit(f)
         }
@@ -52,14 +63,22 @@ class FakeBridgeTransport(
         return response
     }
 
-    override suspend fun postUiResponse(correlationId: String, body: JsonObject, idempotencyKey: String): CommandResponse =
-        ack("ui_response", idempotencyKey)
+    override suspend fun postUiResponse(correlationId: String, body: JsonObject, idempotencyKey: String): CommandResponse {
+        responseFailure?.let { throw it }
+        responseGate?.await()
+        postedUiResponses.add(correlationId to body)
+        return ack("ui_response", idempotencyKey)
+    }
 
     override suspend fun postHostToolResult(correlationId: String, body: JsonObject, idempotencyKey: String): CommandResponse =
         ack("host_tool_result", idempotencyKey)
 
-    override suspend fun postHostUriResult(correlationId: String, body: JsonObject, idempotencyKey: String): CommandResponse =
-        ack("host_uri_result", idempotencyKey)
+    override suspend fun postHostUriResult(correlationId: String, body: JsonObject, idempotencyKey: String): CommandResponse {
+        responseFailure?.let { throw it }
+        responseGate?.await()
+        postedHostUriResults.add(correlationId to body)
+        return ack("host_uri_result", idempotencyKey)
+    }
 
     private fun ack(kind: String, idempotencyKey: String): CommandResponse {
         idempotencyCache[idempotencyKey]?.let { return it }

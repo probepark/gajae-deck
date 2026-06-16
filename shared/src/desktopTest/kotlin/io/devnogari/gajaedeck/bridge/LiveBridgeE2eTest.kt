@@ -2,6 +2,7 @@ package io.devnogari.gajaedeck.bridge
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.devnogari.gajaedeck.ui.SessionController
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.security.cert.X509Certificate
@@ -56,6 +57,16 @@ class LiveBridgeE2eTest {
         val accepted = handshake.value
         assertEquals(2, accepted.protocolVersion)
 
+        val controller = SessionController(KtorBridgeConnector(base, token, client = client), this)
+        controller.connect()
+        controller.state.first { it.connection == ConnectionState.CONNECTED_STREAMING }
+        assertTrue(controller.state.value.transcript.isNotEmpty(), "live bridge transcript should not be empty after connect")
+
+        /*
+         * Full 5-gate response-path plus command-form-submit happy-path verification requires
+         * a live gjc bridge:
+         * GJC_BRIDGE_E2E=1 GJC_BRIDGE_TOKEN=... GJC_BRIDGE_BASE=...
+         */
         val session = KtorBridgeTransport(base, token, sessionId = accepted.sessionId, client = client)
         val resp = session.postCommand("get_session_stats", idempotencyKey = "e2e-" + kotlin.random.Random.nextInt())
         assertTrue(resp.success, "get_session_stats should succeed")

@@ -36,7 +36,7 @@ class DeepLinkResumeHandlerTest {
         assertEquals("dl_opaque_01", control.respawnSessionId)
         assertEquals("dl_opaque_01", result.sessionId)
         assertEquals(77L, result.lastSeq)
-        assertEquals(77L, result.bridgeClient.lastSeq)
+        assertEquals(77L, result.controller.resumeCursor)
         assertEquals(route, connectorRoute)
     }
 

@@ -19,10 +19,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -30,7 +32,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.devnogari.gajaedeck.bridge.BridgeFrame
+import io.devnogari.gajaedeck.bridge.TranscriptItem
+import io.devnogari.gajaedeck.bridge.MessageItem
+import io.devnogari.gajaedeck.bridge.ToolCallItem
+import io.devnogari.gajaedeck.bridge.GateItem
+import io.devnogari.gajaedeck.bridge.NoticeItem
+import io.devnogari.gajaedeck.bridge.CommandRegistry
+import io.devnogari.gajaedeck.bridge.CommandMetadata
+import io.devnogari.gajaedeck.bridge.FieldKind
+import kotlinx.serialization.json.JsonObject
 import io.devnogari.gajaedeck.resources.Res
 import io.devnogari.gajaedeck.resources.command_palette
 import io.devnogari.gajaedeck.resources.error_label
@@ -41,7 +51,7 @@ import io.devnogari.gajaedeck.resources.send_log
 import io.devnogari.gajaedeck.resources.session_title
 import org.jetbrains.compose.resources.stringResource
 
-private val paletteCommands = listOf("get_session_stats", "get_messages", "compact", "abort")
+
 
 /** Live session screen: connection state, streamed frames, prompt input, command palette, send log. */
 @Composable
@@ -58,8 +68,24 @@ fun SessionScreen(controller: SessionController, onBack: () -> Unit) {
         state.error?.let { Text("${stringResource(Res.string.error_label)}: $it", color = MaterialTheme.colorScheme.error) }
 
         LazyColumn(modifier = Modifier.fillMaxWidth().height(280.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(state.frames) { frame -> FrameCard(frame) }
+            items(state.transcript, key = { it.key }) { item -> TranscriptCard(item) }
         }
+        if (state.gateRequests.isNotEmpty()) {
+            val fieldValues = remember { mutableStateMapOf<String, String>() }
+            state.gateRequests.forEach { req ->
+                ActionRequestPanel(
+                    request = req,
+                    fieldValues = fieldValues,
+                    onFieldChange = { name, value -> fieldValues[name] = value },
+                    onAction = { actionId ->
+                        controller.respondToGate(req.correlationId, actionId, fieldValues.toMap())
+                        fieldValues.clear()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(prompt, { prompt = it }, label = { Text(stringResource(Res.string.prompt_label)) }, modifier = Modifier.weight(1f))
@@ -67,10 +93,7 @@ fun SessionScreen(controller: SessionController, onBack: () -> Unit) {
             Button(onClick = { controller.sendPrompt(prompt); prompt = "" }) { Text(stringResource(Res.string.send)) }
         }
 
-        Text(stringResource(Res.string.command_palette), style = MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            paletteCommands.forEach { cmd -> Button(onClick = { controller.sendCommand(cmd) }) { Text(cmd) } }
-        }
+        CommandPalette(state) { type, params -> controller.sendCommand(type, params) }
 
         Text(stringResource(Res.string.send_log), style = MaterialTheme.typography.titleSmall)
         Column(modifier = Modifier.fillMaxWidth().height(120.dp).verticalScroll(rememberScrollState())) {
@@ -80,15 +103,92 @@ fun SessionScreen(controller: SessionController, onBack: () -> Unit) {
 }
 
 @Composable
-private fun FrameCard(frame: BridgeFrame) {
+private fun TranscriptCard(item: TranscriptItem) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(8.dp)) {
-            Text(
-                "#${frame.seq ?: "-"}  ${frame.type.wire}",
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelLarge,
-            )
-            Text(frame.raw.toString(), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+            when (item) {
+                is MessageItem -> {
+                    Text(item.role, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                    Text(item.text, style = MaterialTheme.typography.bodySmall)
+                }
+                is ToolCallItem -> {
+                    Text("tool: ${item.tool}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                    Text(item.summary, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+                }
+                is GateItem -> {
+                    Text("입력 필요 · ${item.frameKind}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                    Text(item.preview, style = MaterialTheme.typography.bodySmall)
+                }
+                is NoticeItem -> {
+                    Text(item.kind, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
+                    Text(item.raw, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+/** Grouped, scope-gated command palette: the 12 exposed commands by [CommandGroup], with a schema-driven arg form. */
+@Composable
+private fun CommandPalette(state: SessionUiState, onSend: (String, JsonObject) -> Unit) {
+    var selected by remember { mutableStateOf<CommandMetadata?>(null) }
+    val fieldValues = remember { mutableStateMapOf<String, String>() }
+    Text(stringResource(Res.string.command_palette), style = MaterialTheme.typography.titleSmall)
+    CommandRegistry.exposed.groupBy { it.group }.forEach { (group, cmds) ->
+        Text(group.name, style = MaterialTheme.typography.labelSmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            cmds.forEach { meta ->
+                val enabled = CommandRegistry.isEnabled(meta.type, state.grantedScopes)
+                Button(
+                    enabled = enabled,
+                    onClick = {
+                        if (meta.fields.isEmpty()) {
+                            onSend(meta.type, JsonObject(emptyMap()))
+                        } else {
+                            selected = meta
+                            fieldValues.clear()
+                        }
+                    },
+                ) { Text(meta.type) }
+            }
+        }
+    }
+    selected?.let { meta ->
+        val requiredFilled = meta.fields.filter { it.required }.all { (fieldValues[it.name] ?: "").isNotBlank() }
+        val canSend = CommandRegistry.isEnabled(meta.type, state.grantedScopes) && requiredFilled
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(meta.type, fontWeight = FontWeight.Bold)
+                meta.fields.forEach { f ->
+                    when (f.kind) {
+                        FieldKind.BOOLEAN -> Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(f.label)
+                            Spacer(Modifier.width(8.dp))
+                            Switch(
+                                checked = fieldValues[f.name] == "true",
+                                onCheckedChange = { fieldValues[f.name] = it.toString() },
+                            )
+                        }
+                        else -> OutlinedTextField(
+                            value = fieldValues[f.name] ?: "",
+                            onValueChange = { fieldValues[f.name] = it },
+                            label = { Text(f.label + if (f.required) " *" else "") },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        enabled = canSend,
+                        onClick = {
+                            onSend(meta.type, CommandRegistry.buildParams(meta, fieldValues.toMap()))
+                            selected = null
+                            fieldValues.clear()
+                        },
+                    ) { Text(stringResource(Res.string.send)) }
+                    TextButton(onClick = { selected = null; fieldValues.clear() }) { Text("Cancel") }
+                }
+            }
         }
     }
 }

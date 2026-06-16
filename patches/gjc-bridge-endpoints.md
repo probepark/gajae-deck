@@ -56,3 +56,10 @@ gjc --mode bridge
 ## Web (browser) topology
 The bridge sends no CORS headers. Serve the web app and proxy `/healthz` + `/v1/*` from one origin
 (Caddy `tls internal` for dev, real/Tailscale cert for prod) — see `docs/bridge/protocol-v2.md`.
+
+## Idempotent apply
+- Re-applying this patch must be a no-op: before inserting parseBridgeEndpoints/endpointMatrix, check whether `GJC_BRIDGE_ENDPOINTS` handling already exists in src/modes/bridge/bridge-mode.ts and skip if present. The local apply script must be safe to run repeatedly.
+- Acceptance for this story is the idempotent local apply + PR link, NOT upstream merge.
+
+## Upstream tracking
+- Submit the change as an upstream PR to @gajae-code/coding-agent and record the PR URL here. Merge is outside this repo's control and is explicitly excluded from acceptance.

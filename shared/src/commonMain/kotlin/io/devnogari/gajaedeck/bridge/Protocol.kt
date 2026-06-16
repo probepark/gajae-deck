@@ -24,6 +24,7 @@ enum class BridgeFrameType(val wire: String) {
     HOST_URI_REQUEST("host_uri_request"),
     RESET("reset"),
     WORKFLOW_GATE("workflow_gate"),
+    ELICITATION("elicitation"),
     ERROR("error"),
     UNKNOWN("unknown");
 

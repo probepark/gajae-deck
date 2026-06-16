@@ -14,7 +14,7 @@ import { FakePushProvider, sendWithRetry } from "../providers";
 import { defaultScopes, mintScopedToken, timingSafeTokenEqual, validateRouteClaim } from "../tokens";
 import { restoreWithinBudget } from "../boot";
 import { prependHistoryStream } from "../proxy";
-import { SessionRegistry } from "../sessions";
+import { BRIDGE_DISCOVER_CAPABILITIES, buildDiscoverHandshakeBody, SessionRegistry } from "../sessions";
 
 const servers: ReturnType<typeof Bun.serve>[] = [];
 afterEach(() => { while (servers.length) servers.pop()!.stop(true); });
@@ -23,6 +23,27 @@ function fakeBridge(handler?: (req: Request) => Response | Promise<Response>) {
   const seen: Request[] = [];
   const server = Bun.serve({ port: 0, hostname: "127.0.0.1", fetch(req) { seen.push(req); return handler?.(req) ?? Response.json({ ok: true, authorization: req.headers.get("authorization") }); } });
   servers.push(server); return { url: `http://127.0.0.1:${server.port}`, seen };
+
+test("builds bridge discover handshake with canonical capabilities", () => {
+  const body = buildDiscoverHandshakeBody(["prompt", "control"]);
+
+  expect(body.capabilities).toEqual([
+    "events",
+    "prompt",
+    "permission",
+    "workflow_gate",
+    "ui.declarative",
+    "elicitation",
+    "host_tools",
+    "host_uri",
+  ]);
+  expect(body.protocol_version_range).toEqual({ min: 1, max: 2 });
+  expect(body.requested_scopes).toEqual(["prompt", "control"]);
+  expect(BRIDGE_DISCOVER_CAPABILITIES).toContain("ui.declarative");
+  expect(BRIDGE_DISCOVER_CAPABILITIES).toContain("elicitation");
+  expect(BRIDGE_DISCOVER_CAPABILITIES).toContain("host_uri");
+  expect(BRIDGE_DISCOVER_CAPABILITIES).toContain("host_tools");
+});
 }
 
 describe("health fixtures", () => {

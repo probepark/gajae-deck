@@ -13,7 +13,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import io.ktor.utils.io.readUTF8Line
+import io.ktor.utils.io.readLine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.JsonObject
@@ -71,7 +71,7 @@ class KtorBridgeTransport(
             val parser = BridgeStreamParser()
             val channel = resp.bodyAsChannel()
             while (true) {
-                val line = channel.readUTF8Line() ?: break
+                val line = channel.readLine() ?: break
                 for (frame in parser.feed(line + "\n")) send(frame)
             }
             for (frame in parser.flush()) send(frame)

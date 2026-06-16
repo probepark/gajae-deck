@@ -27,7 +27,7 @@ class SessionControllerTest {
         controller.connect()
         val state = controller.state.value
         assertEquals(ConnectionState.CONNECTED_STREAMING, state.connection)
-        assertEquals(2, state.frames.size)
+        assertEquals(2, state.transcript.size)
         scope.cancel()
     }
 

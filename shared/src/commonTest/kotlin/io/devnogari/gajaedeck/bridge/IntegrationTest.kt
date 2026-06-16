@@ -30,9 +30,10 @@ class IntegrationTest {
 
         val state = controller.state.value
         assertEquals(ConnectionState.CONNECTED_STREAMING, state.connection)
-        assertEquals(4, state.frames.size)
-        assertTrue(state.frames.any { it.type == BridgeFrameType.PERMISSION_REQUEST })
-        assertTrue(state.frames.any { it.type == BridgeFrameType.WORKFLOW_GATE })
+        assertEquals(4, state.transcript.size)
+        assertTrue(state.transcript.any { it is GateItem && it.frameKind == "permission_request" })
+        assertTrue(state.transcript.any { it is GateItem && it.frameKind == "workflow_gate" })
+        assertEquals(2, state.pendingGates.size)
         assertTrue(state.sentLog.any { it.contains("prompt") && it.contains("ok") })
         assertTrue(state.sentLog.any { it.contains("workflow_gate_response") && it.contains("ok") })
         scope.cancel()

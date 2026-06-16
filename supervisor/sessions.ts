@@ -6,6 +6,17 @@ import type { SupervisorConfig } from "./config";
 import { defaultScopes, mintScopedToken, revokeScopedToken, type RouteClaim } from "./tokens";
 import { envelope } from "./health";
 import { hashId, logJson, type Metrics } from "./observability";
+export const BRIDGE_DISCOVER_CAPABILITIES = ["events", "prompt", "permission", "workflow_gate", "ui.declarative", "elicitation", "host_tools", "host_uri"] as const;
+
+export function buildDiscoverHandshakeBody(requestedScopes: string[]) {
+  return {
+    protocol_version_range: { min: 1, max: 2 },
+    capabilities: [...BRIDGE_DISCOVER_CAPABILITIES],
+    requested_scopes: requestedScopes,
+    last_seq: 0,
+  };
+}
+
 
 export type SessionStatus = "starting" | "ready" | "reconnecting" | "idle" | "degraded" | "stopped" | "error";
 export type RestoreSkipReason = "stale_ttl" | "max_restored_sessions" | "crash_loop_cap" | "project_missing" | "cwd_unavailable" | "config_changed" | "credential_unavailable" | "manual_stop" | "route_invalid";
@@ -37,12 +48,7 @@ async function discoverBridgeSessionId(bridgeUrl: string, token: string, request
     const res = await fetch(`${bridgeUrl}/v1/handshake`, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({
-        protocol_version_range: { min: 1, max: 2 },
-        capabilities: ["events", "prompt", "permission", "workflow_gate"],
-        requested_scopes: requestedScopes,
-        last_seq: 0,
-      }),
+      body: JSON.stringify(buildDiscoverHandshakeBody(requestedScopes)),
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return undefined;

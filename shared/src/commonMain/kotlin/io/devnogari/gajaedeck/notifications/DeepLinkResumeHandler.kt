@@ -1,6 +1,5 @@
 package io.devnogari.gajaedeck.notifications
 
-import io.devnogari.gajaedeck.bridge.BridgeSessionClient
 import io.devnogari.gajaedeck.control.ControlPlaneClient
 import io.devnogari.gajaedeck.ui.ControlSessionControllerFactory
 import io.devnogari.gajaedeck.ui.SessionController
@@ -28,14 +27,12 @@ class DeepLinkResumeHandler(
             .firstOrNull { it.id == opaqueId }
             ?: error("no control session for opaque id")
         val route = controlPlaneClient.respawnSession(session.id).getOrThrow()
-        val bridgeClient = BridgeSessionClient(route, initialLastSeq = session.lastSeq)
         controllerFactory.rememberStartedRoute(route)
-        val controller = controllerFactory.forSession(controlPlaneId, session.id, scope)
+        val controller = controllerFactory.forSession(controlPlaneId, session.id, scope, initialLastSeq = session.lastSeq)
         DeepLinkResumeResult(
             sessionId = session.id,
             lastSeq = session.lastSeq,
             controller = controller,
-            bridgeClient = bridgeClient,
         )
     }
 }
@@ -44,5 +41,4 @@ data class DeepLinkResumeResult(
     val sessionId: String,
     val lastSeq: Long,
     val controller: SessionController,
-    val bridgeClient: BridgeSessionClient,
 )

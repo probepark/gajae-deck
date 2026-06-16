@@ -42,10 +42,11 @@ class ControlSessionControllerFactory(
         controlPlaneId: String,
         sessionId: String,
         scope: CoroutineScope,
+        initialLastSeq: Long = 0L,
     ): SessionController {
         val route = transientRouteHandoff.consume(sessionId)
             ?: controlPlaneClient.respawnSession(sessionId).getOrThrow().also { repository.cacheRoute(controlPlaneId, it) }
-        return controllerForRoute(route, scope)
+        return controllerForRoute(route, scope, initialLastSeq)
     }
 
     suspend fun startForProject(
@@ -64,12 +65,15 @@ class ControlSessionControllerFactory(
         transientRouteHandoff.put(route)
     }
 
-    private fun controllerForRoute(route: SessionRoute, scope: CoroutineScope): SessionController {
-        val client = BridgeSessionClient(route, connectorFactory = bridgeConnectorFactory)
+    private fun controllerForRoute(route: SessionRoute, scope: CoroutineScope, initialLastSeq: Long = 0L): SessionController {
+        // Single ResumeCursor: the same initialLastSeq seeds both the client cursor and the
+        // controller timeline so stream replay starts exactly once from one source of truth.
+        val client = BridgeSessionClient(route, initialLastSeq = initialLastSeq, connectorFactory = bridgeConnectorFactory)
         return SessionController(
             connector = client.connector,
             scope = scope,
             redactor = client.redactor,
+            initialLastSeq = initialLastSeq,
         )
     }
 }

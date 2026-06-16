@@ -709,7 +709,7 @@ describe("history injection and supervisor respawn plan", () => {
     expect(okBody.route.routeId).toStartWith("route_");
     const none = await app.fetch(new Request("http://x/control/v1/sessions/sess_none:respawn", { method: "POST" }));
     expect(none.status).toBe(409);
-    expect((await body(none)).error).toMatchObject({ code: "session_unrecoverable", message: "세션을 복구할 수 없습니다. 프로젝트에서 새 세션을 시작해 주세요.", retryable: false, details: {} });
+    expect((await body(none)).error).toMatchObject({ code: "session_unrecoverable", message: "Could not recover the session. Start a new session from the project.", retryable: false, details: {} });
     await writeFile(join(stateDir, "sess_bad.json"), JSON.stringify({ id: "sess_bad", projectId: "proj_7f3a", cwd: "/tmp/not-this-project" }));
     const bad = await app.fetch(new Request("http://x/control/v1/sessions/sess_bad:respawn", { method: "POST" }));
     expect(bad.status).toBe(409);

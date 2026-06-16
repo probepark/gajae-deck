@@ -82,7 +82,7 @@ class SessionControllerRedactionTest {
         val error = controller.state.value.error
         assertNotNull(error)
         assertFalse(error.contains(secret))
-        assertTrue(error.contains("인증"), "expected the safe auth message, got: $error")
+        assertTrue(error.contains("Authentication"), "expected the safe auth message, got: $error")
         scope.cancel()
     }
 

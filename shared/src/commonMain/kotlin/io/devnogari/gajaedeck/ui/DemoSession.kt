@@ -52,8 +52,8 @@ fun demoSessionController(scope: CoroutineScope): SessionController =
                 ),
                 frames = listOfNotNull(
                     BridgeStreamParser.parseFrame("""{"type":"ready","seq":1,"protocol_version":2}"""),
-                    BridgeStreamParser.parseFrame("""{"type":"event","seq":2,"role":"assistant","text":"안녕하세요! gjc 원격 제어 데모입니다."}"""),
-                    BridgeStreamParser.parseFrame("""{"type":"event","seq":3,"role":"assistant","text":"파일을 분석했습니다."}"""),
+                    BridgeStreamParser.parseFrame("""{"type":"event","seq":2,"role":"assistant","text":"Hello! This is the gjc remote control demo."}"""),
+                    BridgeStreamParser.parseFrame("""{"type":"event","seq":3,"role":"assistant","text":"Analyzed the files."}"""),
                     BridgeStreamParser.parseFrame("""{"type":"permission_request","seq":4,"tool":"bash","correlation_id":"c1"}"""),
                 ),
             ),

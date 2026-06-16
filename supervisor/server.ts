@@ -126,7 +126,7 @@ export function createApp(
       try {
         return json(await registry.respawn(respawn[1]!));
       } catch (error) {
-        if (error instanceof SessionUnrecoverableError) return errorResponse("session_unrecoverable", "세션을 복구할 수 없습니다. 프로젝트에서 새 세션을 시작해 주세요.", false, {}, 409);
+        if (error instanceof SessionUnrecoverableError) return errorResponse("session_unrecoverable", "Could not recover the session. Start a new session from the project.", false, {}, 409);
         throw error;
       }
     }

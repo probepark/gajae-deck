@@ -116,7 +116,7 @@ private fun TranscriptCard(item: TranscriptItem) {
                     Text(item.summary, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
                 }
                 is GateItem -> {
-                    Text("입력 필요 · ${item.frameKind}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                    Text("Input needed · ${item.frameKind}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                     Text(item.preview, style = MaterialTheme.typography.bodySmall)
                 }
                 is NoticeItem -> {

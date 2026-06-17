@@ -13,6 +13,7 @@ import io.devnogari.gajaedeck.auth.StoredControlPlane
 import io.devnogari.gajaedeck.control.ControlPlaneRepository
 import io.devnogari.gajaedeck.control.KtorControlPlaneClient
 import io.devnogari.gajaedeck.navigation.AppNavHost
+import io.devnogari.gajaedeck.navigation.BindBrowserNavigation
 import io.devnogari.gajaedeck.settings.AppSettings
 import io.devnogari.gajaedeck.theme.GajaeDeckTheme
 import io.devnogari.gajaedeck.ui.ControlSessionControllerFactory
@@ -37,8 +38,10 @@ fun App(storageLowerAssurance: Boolean = false) {
                     supervisorBaseUrl = controlPlane.supervisorBaseUrl,
                     controlToken = controlPlane.controlToken,
                 )
+                val navController = rememberNavController()
+                BindBrowserNavigation(navController)
                 AppNavHost(
-                    navController = rememberNavController(),
+                    navController = navController,
                     controlPlaneRepository = controlPlaneRepository,
                     controlPlaneClient = controlPlaneClient,
                         appSettings = appSettings,

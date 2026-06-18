@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,6 +27,9 @@ import io.devnogari.gajaedeck.control.ControlPlaneClient
 import io.devnogari.gajaedeck.control.Session
 import io.devnogari.gajaedeck.control.SessionRoute
 import kotlinx.coroutines.launch
+
+private const val START_SESSION_ERROR_MESSAGE = "세션을 시작하지 못했습니다. 다시 시도하거나 Supervisor 연결 상태를 확인하세요."
+private const val LOAD_SESSIONS_ERROR_MESSAGE = "세션 목록을 불러오지 못했습니다. 다시 시도하거나 Supervisor 연결 상태를 확인하세요."
 
 @Composable
 fun ProjectSessionsScreen(
@@ -45,49 +48,62 @@ fun ProjectSessionsScreen(
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Project sessions", style = MaterialTheme.typography.titleLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
-                scope.launch {
-                    controlPlaneClient.startSession(projectId, resume = "latest", scopes = emptyList()).fold(
-                        onSuccess = onSessionStarted,
-                        onFailure = { error = it.message ?: "Failed to start session" },
-                    )
-                }
-            }, shape = MaterialTheme.shapes.small) { Text("Start session") }
-            FilledTonalButton(onClick = {
-                scope.launch {
-                    controlPlaneClient.startSession(projectId, resume = "new", scopes = emptyList()).fold(
-                        onSuccess = onSessionStarted,
-                        onFailure = { error = it.message ?: "Failed to start new conversation" },
-                    )
-                }
-            }, shape = MaterialTheme.shapes.small) { Text("New conversation") }
+            Button(
+                onClick = {
+                    scope.launch {
+                        controlPlaneClient.startSession(projectId, resume = "latest", scopes = emptyList()).fold(
+                            onSuccess = onSessionStarted,
+                            onFailure = { error = START_SESSION_ERROR_MESSAGE },
+                        )
+                    }
+                },
+                shape = MaterialTheme.shapes.small,
+            ) {
+                Text("최근 세션 이어가기")
+            }
+            FilledTonalButton(
+                onClick = {
+                    scope.launch {
+                        controlPlaneClient.startSession(projectId, resume = "new", scopes = emptyList()).fold(
+                            onSuccess = onSessionStarted,
+                            onFailure = { error = START_SESSION_ERROR_MESSAGE },
+                        )
+                    }
+                },
+                shape = MaterialTheme.shapes.small,
+            ) {
+                Text("새 세션 시작")
+            }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         when (val result = sessions) {
             null -> Text("Loading sessions…")
             else -> result.fold(
                 onSuccess = { rows ->
-                    if (rows.isEmpty()) Text("No sessions") else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(rows, key = { it.id }) { session ->
-                            SessionRow(session = session, onClick = { onSessionSelected(session.id) })
+                    if (rows.isEmpty()) {
+                        Text("아직 세션이 없습니다. 새 세션 시작을 눌러 세션을 만드세요.")
+                    } else {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            itemsIndexed(rows, key = { _, session -> session.id }) { index, session ->
+                                SessionRow(index = index + 1, onClick = { onSessionSelected(session.id) })
+                            }
                         }
                     }
                 },
-                onFailure = { Text("Failed to load sessions: ${it.message ?: "unknown"}") },
+                onFailure = {
+                    Text(LOAD_SESSIONS_ERROR_MESSAGE, color = MaterialTheme.colorScheme.error)
+                },
             )
         }
     }
 }
 
 @Composable
-private fun SessionRow(session: Session, onClick: () -> Unit) {
+private fun SessionRow(index: Int, onClick: () -> Unit) {
     OutlinedCard(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
-                Text(session.id, style = MaterialTheme.typography.titleMedium)
-                Text("seq ${session.lastSeq}", style = MaterialTheme.typography.bodySmall)
-            }
-            Text(session.status.name.lowercase())
+            Text("세션 $index")
+            Text("선택한 세션 열기", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

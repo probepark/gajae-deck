@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -39,7 +39,7 @@ fun ActionRequestPanel(
     OutlinedCard(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = request.summary,
+                text = requestSummary(request.summary),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -76,17 +76,25 @@ fun ActionRequestPanel(
                                 shape = MaterialTheme.shapes.small,
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                            ) { Text(text = action.label) }
+                            ) {
+                                Text(actionLabel(action.id, action.label))
+                            }
+
                             GateActionStyle.PRIMARY -> Button(
                                 onClick = { onAction(action.id) },
                                 enabled = actionEnabled,
                                 shape = MaterialTheme.shapes.small,
-                            ) { Text(text = action.label) }
+                            ) {
+                                Text(actionLabel(action.id, action.label))
+                            }
+
                             GateActionStyle.NEUTRAL -> FilledTonalButton(
                                 onClick = { onAction(action.id) },
                                 enabled = actionEnabled,
                                 shape = MaterialTheme.shapes.small,
-                            ) { Text(text = action.label) }
+                            ) {
+                                Text(actionLabel(action.id, action.label))
+                            }
                         }
                     }
                 }
@@ -110,14 +118,14 @@ private fun ActionRequestField(
             value = value,
             onValueChange = { onFieldChange(field.name, it) },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(text = field.label) },
-            placeholder = field.placeholder?.let { placeholder -> ({ Text(text = placeholder) }) },
+            label = { Text(text = fieldLabel(field)) },
+            placeholder = field.placeholder?.let { { Text(text = it) } },
             singleLine = field.kind != FieldKind.MULTILINE && field.kind != FieldKind.JSON,
             isError = !ActionRequestPanelLogic.fieldValid(field, value),
         )
 
         FieldKind.BOOLEAN -> Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = field.label, modifier = Modifier.weight(1f))
+            Text(text = fieldLabel(field), modifier = Modifier.weight(1f))
             Switch(
                 checked = value == "true",
                 onCheckedChange = { onFieldChange(field.name, it.toString()) },
@@ -125,7 +133,7 @@ private fun ActionRequestField(
         }
 
         FieldKind.ENUM -> Column {
-            Text(text = field.label, style = MaterialTheme.typography.bodySmall)
+            Text(text = fieldLabel(field), style = MaterialTheme.typography.bodySmall)
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 field.options.forEachIndexed { index, option ->
@@ -140,4 +148,30 @@ private fun ActionRequestField(
             }
         }
     }
+}
+
+private fun requestSummary(summary: String): String = when {
+    summary.startsWith("Permission: ") -> "권한 승인 · ${summary.removePrefix("Permission: ")}"
+    summary.startsWith("Workflow: ") -> "워크플로 확인 · ${summary.removePrefix("Workflow: ")}"
+    summary.startsWith("Input: ") -> "추가 입력 · ${summary.removePrefix("Input: ")}"
+    else -> summary
+}
+
+private fun actionLabel(id: String, fallback: String): String = when (id) {
+    "allow" -> "허용"
+    "deny" -> "거부"
+    "always" -> "항상 허용"
+    "continue" -> "계속"
+    "cancel" -> "취소"
+    "submit" -> "제출"
+    "approve" -> "승인"
+    else -> fallback
+}
+
+private fun fieldLabel(field: FieldDescriptor): String = when (field.label) {
+    "Message" -> "메시지"
+    "Session ID" -> "세션 ID"
+    "Name" -> "이름"
+    "Reason" -> "사유"
+    else -> field.label
 }

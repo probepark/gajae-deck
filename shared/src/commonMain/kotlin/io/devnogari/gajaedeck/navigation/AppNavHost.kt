@@ -48,6 +48,7 @@ fun AppNavHost(
                 onProjectSelected = actions::openProjectSessions,
             )
         }
+
         composable<ProjectSessionsRoute> { entry ->
             val route = entry.toRoute<ProjectSessionsRoute>()
             ProjectSessionsScreen(
@@ -60,10 +61,11 @@ fun AppNavHost(
                 },
             )
         }
+
         composable<SessionRoute> { entry ->
             val route = entry.toRoute<SessionRoute>()
             if (controlPlaneId == null) {
-                Text("No control plane configured")
+                Text("원격 제어 연결이 아직 설정되지 않았습니다.")
             } else {
                 val controllerState = produceState<Result<SessionController>?>(initialValue = null, controlPlaneId, route.sessionId) {
                     value = runCatching {
@@ -81,14 +83,18 @@ fun AppNavHost(
                             LaunchedEffect(controller) { controller.connect() }
                             SessionScreen(controller = controller, onBack = actions::back)
                         },
-                        onFailure = { error -> Text("Failed to open session: ${error.message ?: "unknown"}") },
+                        onFailure = {
+                            Text("세션을 열지 못했습니다. Supervisor 연결 상태를 확인하세요.")
+                        },
                     )
                 }
             }
         }
+
         composable<SettingsRoute> {
             SettingsScreen(appSettings = appSettings, storageLowerAssurance = storageLowerAssurance, onBack = actions::back)
         }
+
         composable<PairingsListRoute> {
             ProjectsScreen(
                 controlPlaneClient = controlPlaneClient,

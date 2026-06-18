@@ -1,9 +1,9 @@
 <resources>
     <string name="app_name">가재덱</string>
-    <string name="nav_pairings">페어링</string>
-    <string name="nav_session">세션</string>
+    <string name="nav_pairings">프로젝트</string>
+    <string name="nav_session">원격 세션</string>
     <string name="nav_settings">설정</string>
-    <string name="session_title">세션</string>
+    <string name="session_title">원격 세션</string>
     <string name="error_label">오류</string>
     <string name="prompt_label">프롬프트</string>
     <string name="command_palette">명령 팔레트</string>

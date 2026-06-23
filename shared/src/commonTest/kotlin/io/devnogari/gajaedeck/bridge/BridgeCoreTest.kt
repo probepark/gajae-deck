@@ -26,7 +26,7 @@ class EndpointsTest {
 class CommandCatalogTest {
     @Test
     fun fullCatalogFrozen() {
-        assertEquals(37, CommandCatalog.commands.size)
+        assertEquals(38, CommandCatalog.commands.size)
         assertEquals(BridgeScope.PROMPT, CommandCatalog.scopeFor("prompt"))
         assertEquals(BridgeScope.BASH, CommandCatalog.scopeFor("bash"))
         assertEquals(BridgeScope.MESSAGE_READ, CommandCatalog.scopeFor("get_session_stats"))

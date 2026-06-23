@@ -11,7 +11,7 @@
 - Owner correlation: `X-GJC-Bridge-Owner-Token` (optional; participates in idempotency/controller correlation).
 - Writes (commands, UI responses) carry `Idempotency-Key`; identical key+body+route returns the cached response, key reuse with different owner → `403 {status:rejected, code:not_controller}`, different body → `409 {error:idempotency_conflict}`.
 - **No CORS**: the bridge sends no `Access-Control-*` headers; cross-origin `OPTIONS` to authenticated routes returns `401`. Browsers MUST use a same-origin reverse proxy (e.g. Caddy) that serves the web app and proxies `/healthz` + `/v1/*`.
-- **Fail-closed by default**: session endpoints are disabled unless explicitly enabled. In this environment a local opt-in patch threads `GJC_BRIDGE_ENDPOINTS` into the endpoint matrix (see `docs/phase0/phase0-gate-result.md`). Clients MUST treat `403 {error:endpoint_disabled, endpoint:<name>}` as "unavailable".
+- **Fail-closed by default**: session endpoints are disabled unless explicitly enabled. gjc >= 0.7.1 supports `GJC_BRIDGE_ENDPOINTS` natively; the installed `@gajae-code/coding-agent` honors it with no local patch required. Clients MUST treat `403 {error:endpoint_disabled, endpoint:<name>}` as "unavailable".
 
 ## Endpoints
 | Method | Path | Auth | Endpoint-matrix key |
@@ -51,7 +51,7 @@ Server capabilities advertised when `events` enabled: `events, prompt, permissio
 Stream framing: content-type-adaptive; client parser MUST tolerate SSE (`text/event-stream`) and NDJSON. Each frame carries `protocol_version`, `session_id`, `seq`, `frame_id`. Reconnect with `?last_seq=<n>`; `reset` frame with `replay_window_exceeded` clears the local timeline (recover via snapshot).
 
 ## Command catalog (`type` → required scope)
-`POST /v1/sessions/{id}/commands` body: `{ "type": <RpcCommandType>, ...params }`. Authoritative registry (37 commands):
+`POST /v1/sessions/{id}/commands` body: `{ "type": <RpcCommandType>, ...params }`. Authoritative registry (38 commands):
 
 | type | scope |
 |------|-------|
@@ -65,6 +65,7 @@ Stream framing: content-type-adaptive; client parser MUST tolerate SSE (`text/ev
 | set_todos | control |
 | set_host_tools | host_tools |
 | set_host_uri_schemes | host_uri |
+| get_pending_workflow_gates | message:read |
 | set_model | model |
 | cycle_model | model |
 | get_available_models | model |
@@ -95,7 +96,7 @@ Stream framing: content-type-adaptive; client parser MUST tolerate SSE (`text/ev
 
 Scopes (`BridgeCommandScope`): `prompt, control, bash, export, session, model, message:read, host_tools, host_uri, admin`. Mandatory floor: `prompt`. Server scopes set via `GJC_BRIDGE_SCOPES` (comma list). A command whose scope is not granted → `403 {error:scope_denied, scope:<scope>}`.
 
-> Note: the deep-interview spec referenced "~19 commands"; the actual frozen catalog is **37** command types. The CMP `CommandCatalog` MUST cover the full registry above (UI may group/prioritize, but typed payloads exist for all).
+> Note: the deep-interview spec referenced "~19 commands"; the actual frozen catalog is **38** command types. The CMP `CommandCatalog` MUST cover the full registry above (UI may group/prioritize, but typed payloads exist for all).
 
 ## Command response shape
 `{ "type":"response", "command":<type>, "success":boolean, "data"?:object, "error"?:object }` (see `fixtures/bridge-v2/command-get_session_stats.response.json`).

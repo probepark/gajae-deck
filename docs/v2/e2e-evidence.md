@@ -87,7 +87,7 @@ GJC_BRIDGE_E2E=1 GJC_BRIDGE_TOKEN=... GJC_BRIDGE_BASE=... ./gradlew :shared:desk
 - P1: bounded `TranscriptState` ring + semantic reducer + `PendingGateIndex`.
 - P2: sealed gate adapters + `ActionRequestPanel` with redaction-by-construction.
 - P3: five gate response paths: correlation match, Outbox exclusive, in-flight exact-once, fail-closed actuator, and session-scoped always-allow.
-- P4: `CommandRegistry` 37 total / 12 exposed commands, grouped scope-gated palette, and schema form.
+- P4: `CommandRegistry` 38 total / 12 exposed commands, grouped scope-gated palette, and schema form.
 - P5: app + supervisor canonical capability/scope alignment and negotiation fixtures.
 - P6: evidence docs record the control-first UI/UX screenshots, verification lanes, and deferred items.
 - Deferred/non-goals: real-device iOS/Android E2E, native TLS pinning/cert-rotation, 25 non-exposed command dedicated forms, upstream PR merge, and per-story QA artifact.

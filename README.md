@@ -114,9 +114,11 @@ bun install
 bun run server.ts        # starts on 127.0.0.1:8787 by default
 ```
 
-The supervisor spawns the `gjc` bridge; applying the opt-in
-[`patches/gjc-bridge-endpoints.md`](patches/gjc-bridge-endpoints.md) enables the
-session endpoints the client needs.
+The supervisor spawns the `gjc` bridge. gjc >= 0.7.1 supports
+`GJC_BRIDGE_ENDPOINTS` natively; set it via the supervisor's bridge env to
+enable the session endpoints the client needs. The
+[`patches/gjc-bridge-endpoints.md`](patches/gjc-bridge-endpoints.md) patch is
+only needed for older gjc versions.
 
 ## Testing
 

@@ -24,5 +24,5 @@ Deferred (require devices/simulators or are polish):
 ## Process / hardening
 - ultragoal formal quality-gate checkpoints (architect + executor QA) per story.
 - Expanded stress matrix: reconnect storm, background resume, cert rotation, large history, renderer virtualization perf.
-- Upstream the gjc bridge opt-in `GJC_BRIDGE_ENDPOINTS` patch (see `patches/gjc-bridge-endpoints.md`) instead of patching `node_modules`.
+- DONE: gjc bridge opt-in `GJC_BRIDGE_ENDPOINTS` shipped natively in gjc >= 0.7.1; `patches/gjc-bridge-endpoints.md` is retained only for historical/older-version reference.
 - Migrate `ByteReadChannel.readUTF8Line` (deprecated) to `readLine`.

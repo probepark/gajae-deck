@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 class CommandRegistryTest {
     @Test
     fun registryIsCompleteAndUnique() {
-        assertEquals(37, CommandRegistry.all.size)
+        assertEquals(38, CommandRegistry.all.size)
         assertEquals(CommandCatalog.types.toSet(), CommandRegistry.all.map { it.type }.toSet())
         assertEquals(CommandRegistry.all.size, CommandRegistry.all.map { it.type }.toSet().size)
     }

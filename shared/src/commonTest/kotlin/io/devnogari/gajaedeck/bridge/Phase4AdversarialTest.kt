@@ -19,7 +19,7 @@ class Phase4AdversarialTest {
         val catalogTypes = CommandCatalog.types
 
         assertEquals(CommandCatalog.types.toSet(), registryTypes.toSet())
-        assertEquals(37, registryTypes.size)
+        assertEquals(38, registryTypes.size)
         assertEquals(registryTypes.size, registryTypes.toSet().size, "CommandRegistry contains duplicate command types")
         assertEquals(12, CommandRegistry.exposed.size)
         assertTrue(CommandRegistry.exposed.all { it.type in catalogTypes })

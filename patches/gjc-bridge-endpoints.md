@@ -1,4 +1,5 @@
 # Patch: gjc bridge opt-in endpoint enablement
+> STATUS: UPSTREAMED / NO LONGER REQUIRED for gjc >= 0.7.1. `GJC_BRIDGE_ENDPOINTS` is supported natively via `parseBridgeEndpoints` in `src/modes/bridge/bridge-mode.ts` of the installed `@gajae-code/coding-agent`. This note is retained only as historical reference and for older gjc versions.
 
 External dependency. The CMP client requires the gjc bridge session endpoints to be reachable.
 The installed gjc runtime is hardcoded fail-closed: `runBridgeMode` calls `createBridgeFetchHandler`

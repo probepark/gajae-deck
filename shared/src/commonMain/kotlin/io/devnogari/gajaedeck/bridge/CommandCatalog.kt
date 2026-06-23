@@ -3,7 +3,7 @@ package io.devnogari.gajaedeck.bridge
 /** A bridge command type and the scope it requires (frozen registry, see protocol-v2.md). */
 data class BridgeCommand(val type: String, val scope: BridgeScope)
 
-/** The authoritative gjc Bridge v2 command catalog (37 commands) with required scopes. */
+/** gjc Bridge v2 command catalog (38 commands) with required scopes. */
 object CommandCatalog {
     val commands: List<BridgeCommand> = listOf(
         BridgeCommand("prompt", BridgeScope.PROMPT),
@@ -16,6 +16,7 @@ object CommandCatalog {
         BridgeCommand("set_todos", BridgeScope.CONTROL),
         BridgeCommand("set_host_tools", BridgeScope.HOST_TOOLS),
         BridgeCommand("set_host_uri_schemes", BridgeScope.HOST_URI),
+        BridgeCommand("get_pending_workflow_gates", BridgeScope.MESSAGE_READ),
         BridgeCommand("set_model", BridgeScope.MODEL),
         BridgeCommand("cycle_model", BridgeScope.MODEL),
         BridgeCommand("get_available_models", BridgeScope.MODEL),
